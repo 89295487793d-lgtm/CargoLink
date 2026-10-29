@@ -1,19 +1,13 @@
-import os
-from dataclasses import dataclass
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-@dataclass(frozen=True)
-class Settings:
-    bot_token: str
-    webapp_url: str
-    database_url: str
-    dev_auth: bool
-    log_level: str
+class Settings(BaseSettings):
+    bot_token: str = ""
+    webapp_url: str = "https://example.com"
+    database_url: str = "sqlite:///./cargolink.db"
+    admin_ids: str = ""
+    app_name: str = "CargoLink"
+    log_level: str = "INFO"
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 def settings() -> Settings:
-    return Settings(
-        bot_token=os.getenv("BOT_TOKEN", "").strip(),
-        webapp_url=os.getenv("WEBAPP_URL", "https://example.invalid").strip(),
-        database_url=os.getenv("DATABASE_URL", "postgresql+asyncpg://cargolink:cargolink_dev_password@db:5432/cargolink").strip(),
-        dev_auth=os.getenv("DEV_AUTH", "false").lower() == "true",
-        log_level=os.getenv("LOG_LEVEL", "INFO").upper(),
-    )
+    return Settings()

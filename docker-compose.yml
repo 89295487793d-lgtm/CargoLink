@@ -1,0 +1,52 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: cargolink
+      POSTGRES_USER: cargolink
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cargolink_local_password}
+    volumes:
+      - cargolink_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cargolink -d cargolink"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  init-db:
+    build: .
+    command: ["python", "-m", "app.init_db"]
+    env_file: [.env]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://cargolink:${POSTGRES_PASSWORD:-cargolink_local_password}@db:5432/cargolink
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build: .
+    command: ["uvicorn", "app.api_main:app", "--host", "0.0.0.0", "--port", "8000"]
+    env_file: [.env]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://cargolink:${POSTGRES_PASSWORD:-cargolink_local_password}@db:5432/cargolink
+    depends_on:
+      init-db:
+        condition: service_completed_successfully
+    ports: ["8000:8000"]
+    restart: unless-stopped
+
+  bot:
+    build: .
+    command: ["python", "-m", "app.bot_main"]
+    env_file: [.env]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://cargolink:${POSTGRES_PASSWORD:-cargolink_local_password}@db:5432/cargolink
+    depends_on:
+      init-db:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+volumes:
+  cargolink_pgdata:

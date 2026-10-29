@@ -1,0 +1,26 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: cargolink
+      POSTGRES_USER: cargolink
+      POSTGRES_PASSWORD: cargolink_dev_password
+    volumes:
+      - cargolink_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cargolink -d cargolink"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+  web:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+volumes:
+  cargolink_data:

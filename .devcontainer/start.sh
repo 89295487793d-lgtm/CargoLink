@@ -26,15 +26,18 @@ for attempt in $(seq 1 30); do
   sleep 2
 done
 
-TOKEN="$(grep -E '^BOT_TOKEN=' .env | cut -d= -f2- || true)"
+FILE_TOKEN="$(grep -E '^BOT_TOKEN=' .env | cut -d= -f2- || true)"
+TOKEN="${BOT_TOKEN:-$FILE_TOKEN}"
 if [[ -n "$TOKEN" && "$TOKEN" != "PASTE_TELEGRAM_BOT_TOKEN_HERE" ]]; then
   echo "==> Найден BOT_TOKEN, запускаю Telegram-бота"
   docker compose up -d --build bot
-  docker compose ps
-  echo "Логи бота: docker compose logs -f bot"
+  echo "CargoLink bot запущен. Для просмотра логов: docker compose logs -f bot"
 else
   echo
-  echo "API и база запущены. Telegram-бот ожидает токен."
-  echo "Добавь BOT_TOKEN в .env, затем выполни: docker compose up -d --build bot"
-  docker compose ps
+  echo "API и база запущены. Telegram-бот ожидает секрет BOT_TOKEN."
+  echo "Добавь BOT_TOKEN в Codespaces Secrets и перезапусти Codespace,"
+  echo "либо укажи его в локальном .env, затем выполни:"
+  echo "docker compose up -d --build bot"
 fi
+
+docker compose ps

@@ -1,0 +1,63 @@
+name: CargoLink validation
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create CI environment
+        run: |
+          cat > .env <<'EOF'
+          BOT_TOKEN=000000000:TEST_TOKEN_NOT_FOR_TELEGRAM
+          WEBAPP_URL=
+          POSTGRES_PASSWORD=ci_test_password
+          DATABASE_URL=postgresql+asyncpg://cargolink:ci_test_password@db:5432/cargolink
+          LOG_LEVEL=INFO
+          EOF
+
+      - name: Validate Compose configuration
+        run: docker compose config --quiet
+
+      - name: Build application image
+        run: docker compose build
+
+      - name: Start PostgreSQL
+        run: docker compose up -d db
+
+      - name: Wait for PostgreSQL
+        run: |
+          for i in $(seq 1 30); do
+            if docker compose exec -T db pg_isready -U cargolink -d cargolink; then exit 0; fi
+            sleep 2
+          done
+          docker compose logs db
+          exit 1
+
+      - name: Initialize database schema
+        run: docker compose run --rm init-db
+
+      - name: Start API
+        run: docker compose up -d api
+
+      - name: Check API and database
+        run: |
+          for i in $(seq 1 30); do
+            if curl --fail http://localhost:8000/health; then exit 0; fi
+            sleep 2
+          done
+          docker compose logs api db
+          exit 1
+
+      - name: Verify bot module imports
+        run: docker compose run --rm --no-deps bot python -c "import app.bot_main; print('bot import OK')"
+
+      - name: Stop services
+        if: always()
+        run: docker compose down -v

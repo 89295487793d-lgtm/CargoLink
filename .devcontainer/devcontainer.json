@@ -1,0 +1,18 @@
+{
+  "name": "CargoLink",
+  "dockerComposeFile": "../docker-compose.yml",
+  "service": "api",
+  "workspaceFolder": "/workspaces/CargoLink",
+  "shutdownAction": "stopCompose",
+  "forwardPorts": [8000],
+  "portsAttributes": {
+    "8000": {
+      "label": "CargoLink API",
+      "onAutoForward": "notify"
+    }
+  },
+  "postCreateCommand": "bash .devcontainer/start.sh",
+  "remoteEnv": {
+    "PYTHONUNBUFFERED": "1"
+  }
+}

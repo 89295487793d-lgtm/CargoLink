@@ -17,7 +17,6 @@ services:
   init-db:
     build: .
     command: ["python", "-m", "app.init_db"]
-    env_file: [.env]
     environment:
       DATABASE_URL: postgresql+asyncpg://cargolink:${POSTGRES_PASSWORD:-cargolink_local_password}@db:5432/cargolink
     depends_on:
@@ -28,7 +27,6 @@ services:
   api:
     build: .
     command: ["uvicorn", "app.api_main:app", "--host", "0.0.0.0", "--port", "8000"]
-    env_file: [.env]
     environment:
       DATABASE_URL: postgresql+asyncpg://cargolink:${POSTGRES_PASSWORD:-cargolink_local_password}@db:5432/cargolink
     depends_on:
@@ -45,8 +43,10 @@ services:
   bot:
     build: .
     command: ["python", "-m", "app.bot_main"]
-    env_file: [.env]
     environment:
+      BOT_TOKEN: ${BOT_TOKEN:-}
+      WEBAPP_URL: ${WEBAPP_URL:-}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
       DATABASE_URL: postgresql+asyncpg://cargolink:${POSTGRES_PASSWORD:-cargolink_local_password}@db:5432/cargolink
     depends_on:
       init-db:

@@ -1037,7 +1037,7 @@ async def show_my_offers(message: Message) -> None:
     for offer, cargo in rows:
         text_value = f"Предложение №{offer.id} · заявка №{cargo.id}\n{cargo.origin} → {cargo.destination}\n{offer.price_rub:,.2f} ₽ · {offer.vat_mode}\nСтавка: {names.get(offer.status, offer.status)}"
         keyboard_rows = []
-        if offer.status == "accepted":
+        if offer.status in {"accepted", "awaiting_confirmation"}:
             text_value += f"\nПеревозка: {delivery_names.get(cargo.delivery_status, cargo.delivery_status)}"
             async with SessionLocal() as session:
                 chat_result = await session.execute(select(CargoChat).where(CargoChat.offer_id == offer.id))

@@ -12,6 +12,27 @@
   };
   const dateRu = (value) => value ? new Date(value + "T00:00:00").toLocaleDateString("ru-RU") : "";
   const isCreateMode = new URLSearchParams(location.search).get("mode") === "create";
+  const marketSections = ["market-hero","market-search","market-results-head","results","detail"];
+  function showHome() {
+    $("home-screen")?.classList.remove("hidden");
+    $("create-flow")?.classList.add("hidden");
+    marketSections.forEach(id => $(id)?.classList.add("hidden"));
+    window.scrollTo({top:0,behavior:"smooth"});
+  }
+  function showMarket() {
+    $("home-screen")?.classList.add("hidden");
+    $("create-flow")?.classList.add("hidden");
+    marketSections.forEach(id => $(id)?.classList.remove("hidden"));
+    $("detail")?.classList.add("hidden");
+    load();
+    window.scrollTo({top:0,behavior:"smooth"});
+  }
+  function showCreate() {
+    $("home-screen")?.classList.add("hidden");
+    marketSections.forEach(id => $(id)?.classList.add("hidden"));
+    $("create-flow")?.classList.remove("hidden");
+    window.scrollTo({top:0,behavior:"smooth"});
+  }
 
   function card(item) {
     return `<button class="request-card" data-id="${item.id}">
@@ -319,6 +340,13 @@
       const [from,to] = button.dataset.route.split("|"); $("origin").value = from; $("destination").value = to; load();
     }));
     $("search").addEventListener("click", load);
-    load();
+    ["home-find","home-find-card"].forEach(id => $(id)?.addEventListener("click", showMarket));
+    ["home-create","home-create-card"].forEach(id => $(id)?.addEventListener("click", showCreate));
+    fetch("/api/requests?category=all").then(r => r.ok ? r.json() : Promise.reject()).then(data => {
+      if ($("home-open-count")) $("home-open-count").textContent = new Intl.NumberFormat("ru-RU").format(data.total || 0);
+    }).catch(() => { if ($("home-open-count")) $("home-open-count").textContent = "—"; });
+    showHome();
+  } else {
+    showCreate();
   }
 })();

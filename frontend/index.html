@@ -2,17 +2,25 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#101b33"><title>CargoLink</title>
+<meta name="theme-color" content="#f4f7fb"><title>CargoLink — поиск грузов</title>
 <link rel="stylesheet" href="/style.css"><script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
-<body><main class="app-shell">
-<header class="topbar"><div class="brand-mark">CL</div><div><p class="eyebrow">LOGISTICS PLATFORM</p><h1>CargoLink</h1></div></header>
-<section class="welcome"><p class="eyebrow">ONE PLATFORM. EVERY SHIPMENT.</p><h2>Логистика<br>в одной платформе</h2><p class="muted">Грузы, транспорт и перевозчики — в одном месте.</p></section>
-<section class="primary-actions"><button class="primary" data-action="find">🚚 Найти груз</button><button class="secondary" data-action="create">📦 Разместить заявку</button></section>
-<section class="service-grid">
-<button class="service-card" data-action="liquid"><span>🛢️</span><strong>Наливные грузы</strong><small>Специализированные перевозки</small></button>
-<button class="service-card" data-action="dry"><span>📦</span><strong>Сухие грузы</strong><small>Авто и сборные грузы</small></button>
-<button class="service-card" data-action="vehicles"><span>🚛</span><strong>Свободные авто</strong><small>Доступный транспорт</small></button>
-<button class="service-card" data-action="profile"><span>👤</span><strong>Мой профиль</strong><small>Контакты и активность</small></button>
-</section><footer>Стартовая версия CargoLink · разделы подключаются поэтапно</footer>
-</main><script src="/app.js"></script></body></html>
+<body>
+<main class="app-shell">
+<header class="topbar"><div class="brand-mark">CL</div><div><p class="eyebrow">LOGISTICS PLATFORM</p><h1>CargoLink</h1></div><span class="live-dot">● Онлайн</span></header>
+<section class="hero"><p class="eyebrow">CARGOLINK MARKETPLACE</p><h2>Найти груз</h2><p>Актуальные заявки на перевозку наливных и сухих грузов</p></section>
+<section class="search-panel">
+<div class="tabs" role="tablist"><button class="tab active" data-category="all">Все</button><button class="tab" data-category="liquid">Наливные</button><button class="tab" data-category="dry">Сухие</button></div>
+<label>Откуда<input id="origin" placeholder="Город отправления"></label>
+<label>Куда<input id="destination" placeholder="Город назначения"></label>
+<div class="field-row"><label>Тип груза<input id="cargo" placeholder="Например, дизель"></label><label>Транспорт<input id="vehicle" placeholder="Цистерна"></label></div>
+<button class="primary" id="search">⌕ Найти грузы</button>
+<div class="quick-routes"><span>Быстрые направления</span><button data-route="Москва|Казань">Москва → Казань</button><button data-route="Москва|Санкт-Петербург">Москва → Санкт-Петербург</button><button data-route="Тюмень|Москва">Тюмень → Москва</button></div>
+</section>
+<section class="results-head"><div><p class="eyebrow">MARKETPLACE</p><h3>Результаты поиска</h3></div><span id="count" class="count">Загрузка…</span></section>
+<section id="results" class="results"><div class="empty">Загружаем открытые заявки…</div></section>
+<section id="detail" class="detail hidden"></section>
+<footer>CargoLink · Единая платформа грузов и транспорта</footer>
+</main>
+<script src="/app.js"></script>
+</body></html>

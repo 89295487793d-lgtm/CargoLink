@@ -989,7 +989,7 @@ async def show_my_requests(message: Message) -> None:
         if latest:
             event, actor = latest
             stamp = event.created_at.strftime("%d.%m.%Y %H:%M") if event.created_at else "время не указано"
-            lines.append(f"Последнее изменение: {stamp} · {actor.full_name or \"Участник CargoLink\"}")
+            lines.append(f"Последнее изменение: {stamp} · {actor.full_name or 'Участник CargoLink'}")
         if not offers:
             lines.append("Предложений пока нет.")
         for offer in offers:

@@ -332,16 +332,21 @@ async def find_loads(message: Message) -> None:
         keyboard = InlineKeyboardMarkup(inline_keyboard=[[
             InlineKeyboardButton(text="Подробнее и предложить ставку", callback_data=f"cargo:view:{item.id}")
         ]])
-        await message.answer(
+        card_text = (
             f"Заявка №{item.id}\n"
             f"Маршрут: {item.origin} → {item.destination}\n"
             f"Груз: {item.cargo} · {'Налив' if item.cargo_category == 'liquid' else 'Обычный' if item.cargo_category == 'dry' else 'категория не указана'}\n"
-            f"Масса / объём: {item.weight_tons:g} т" + (f" / {item.volume_m3:g} м³" if item.volume_m3 else "") + (f" · ADR {item.adr_class}" if item.adr_class else "") + "\n"
-            f"Транспорт: {item.vehicle_type}\n"
-            f"Даты: {item.pickup_date}" + (f" — {item.unloading_date}" if item.unloading_date else "") + "\n"
-            f"Стоимость: {item.price_rub or 'не указана'}" + (f" · {item.vat_mode}" if item.vat_mode else "") + (f"\nКомментарий: {item.comment}" if item.comment else ""),
-            reply_markup=keyboard,
+            + f"Масса / объём: {item.weight_tons:g} т"
+            + (f" / {item.volume_m3:g} м³" if item.volume_m3 else "")
+            + (f" · ADR {item.adr_class}" if item.adr_class else "")
+            + f"\nТранспорт: {item.vehicle_type}\n"
+            + f"Даты: {item.pickup_date}"
+            + (f" — {item.unloading_date}" if item.unloading_date else "")
+            + f"\nСтоимость: {item.price_rub or 'не указана'}"
+            + (f" · {item.vat_mode}" if item.vat_mode else "")
+            + (f"\nКомментарий: {item.comment}" if item.comment else "")
         )
+        await message.answer(card_text, reply_markup=keyboard)
 
 
 
@@ -362,15 +367,20 @@ async def cargo_view(callback: CallbackQuery) -> None:
     keyboard = InlineKeyboardMarkup(inline_keyboard=[[
         InlineKeyboardButton(text="💰 Предложить ставку", callback_data=f"offer:start:{item.id}")
     ]])
-    await callback.message.answer(
+    card_text = (
         f"📄 Заявка №{item.id}\n\nМаршрут: {item.origin} → {item.destination}\n"
         f"Груз: {item.cargo} · {'Налив' if item.cargo_category == 'liquid' else 'Обычный' if item.cargo_category == 'dry' else 'категория не указана'}\n"
-        f"Масса / объём: {item.weight_tons:g} т" + (f" / {item.volume_m3:g} м³" if item.volume_m3 else "") + (f" · ADR {item.adr_class}" if item.adr_class else "") + "\n"
-        f"Требуемый транспорт: {item.vehicle_type}\n"
-        f"Даты: {item.pickup_date}" + (f" — {item.unloading_date}" if item.unloading_date else "") + "\n"
-        f"Стоимость: {item.price_rub or 'не указана'}" + (f" · {item.vat_mode}" if item.vat_mode else "") + (f"\nКомментарий: {item.comment}" if item.comment else ""),
-        reply_markup=keyboard,
+        + f"Масса / объём: {item.weight_tons:g} т"
+        + (f" / {item.volume_m3:g} м³" if item.volume_m3 else "")
+        + (f" · ADR {item.adr_class}" if item.adr_class else "")
+        + f"\nТребуемый транспорт: {item.vehicle_type}\n"
+        + f"Даты: {item.pickup_date}"
+        + (f" — {item.unloading_date}" if item.unloading_date else "")
+        + f"\nСтоимость: {item.price_rub or 'не указана'}"
+        + (f" · {item.vat_mode}" if item.vat_mode else "")
+        + (f"\nКомментарий: {item.comment}" if item.comment else "")
     )
+    await callback.message.answer(card_text, reply_markup=keyboard)
     await callback.answer()
 
 

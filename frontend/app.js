@@ -67,7 +67,7 @@
       weight_tons:Number($("f-weight").value), volume_m3:$("f-volume").value ? Number($("f-volume").value) : null,
       adr_class:dangerous ? $("f-adr").value : null, vehicle_type:selectedVehicle(),
       pickup_date:$("f-pickup").value, unloading_date:$("f-unloading").value || null,
-      price_rub:$("f-price").value.trim() || null, vat_mode:$("f-vat").value,
+      price_rub:$("f-price").value.trim() || null, vat_mode:$("f-vat").value, payment_method:$("f-payment").value,
       comment:$("f-comment").value.trim() || null
     };
   }
@@ -76,7 +76,7 @@
     const specs = [d.weight_tons + " т", d.volume_m3 ? d.volume_m3 + " м³" : "", d.adr_class ? "ADR " + d.adr_class : ""].filter(Boolean).join(" · ");
     return `<div class="preview-head"><div><p class="eyebrow">CARGOLINK · ПРЕДПРОСМОТР</p><h3>Новая заявка</h3></div><span class="tag">Черновик</span></div>
       <div class="preview-route"><strong>${esc(d.origin)}</strong><span>→</span><strong>${esc(d.destination)}</strong></div>
-      <div class="preview-price"><strong>${d.price_rub ? money(d.price_rub) : "По договорённости"}</strong><span>${esc(d.vat_mode)}</span></div>
+      <div class="preview-price"><strong>${d.price_rub ? money(d.price_rub) : "По договорённости"}</strong><span>${esc(d.vat_mode)} · ${esc(d.payment_method)}</span></div>
       <div class="preview-grid"><span>Груз</span><strong>${esc(d.cargo)}</strong><span>Категория</span><strong>${d.category === "liquid" ? "Налив" : "Обычный"}</strong><span>Вес / объём / ADR</span><strong>${esc(specs)}</strong><span>Транспорт</span><strong>${esc(d.vehicle_type)}</strong><span>Даты</span><strong>${esc(range)}</strong>${d.comment ? '<span>Комментарий</span><strong>' + esc(d.comment) + '</strong>' : ''}</div>
       <div class="preview-actions"><button type="button" class="secondary" id="edit-request">← Изменить заявку</button><button type="button" class="primary" id="publish-request">Опубликовать заявку</button></div><p id="publish-error" class="form-error hidden"></p>`;
   }

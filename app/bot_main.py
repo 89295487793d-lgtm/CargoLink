@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from datetime import datetime, timezone
 
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import Command, CommandStart
@@ -10,7 +11,7 @@ from sqlalchemy import select, text
 
 from app.config import get_settings
 from app.database import SessionLocal, engine
-from app.models import CargoChat, CargoChatMessage, CargoRequest, CarrierOffer, User
+from app.models import CargoChat, CargoChatMessage, CargoRequest, CargoStatusEvent, CarrierOffer, User
 
 settings = get_settings()
 dp = Dispatcher()
@@ -549,6 +550,10 @@ async def offer_accept(callback: CallbackQuery) -> None:
             return
         offer.status = "accepted"
         cargo.status = "closed"
+        cargo.delivery_status = "accepted"
+        cargo.delivery_updated_at = datetime.now(timezone.utc)
+        cargo.delivery_updated_by = customer.id
+        session.add(CargoStatusEvent(request_id=cargo.id, actor_id=customer.id, status="accepted"))
         other_result = await session.execute(
             select(CarrierOffer).where(CarrierOffer.request_id == cargo.id, CarrierOffer.id != offer.id, CarrierOffer.status == "pending")
         )
@@ -854,6 +859,71 @@ async def offer_reject(callback: CallbackQuery) -> None:
         await callback.bot.send_message(carrier_chat, f"Заказчик отклонил предложение №{offer_id} по заявке №{request_id}.")
     await callback.answer("Предложение отклонено.")
 
+
+@dp.callback_query(F.data.startswith("delivery:loading:"))
+async def delivery_loading(callback: CallbackQuery) -> None:
+    request_id = int(callback.data.rsplit(":", 1)[1])
+    recipients = []
+    actor_name = ""
+    async with SessionLocal() as session:
+        cargo_result = await session.execute(select(CargoRequest).where(CargoRequest.id == request_id))
+        cargo = cargo_result.scalar_one_or_none()
+        user_result = await session.execute(select(User).where(User.telegram_id == callback.from_user.id))
+        actor = user_result.scalar_one_or_none()
+        offer_result = await session.execute(select(CarrierOffer).where(CarrierOffer.request_id == request_id, CarrierOffer.status == "accepted"))
+        offer = offer_result.scalar_one_or_none()
+        if not cargo or not actor or not offer or offer.carrier_id != actor.id:
+            await callback.answer("Только выбранный перевозчик может начать загрузку.", show_alert=True)
+            return
+        if cargo.delivery_status != "accepted":
+            await callback.answer("Статус уже изменён. Обновите список заявок.", show_alert=True)
+            return
+        cargo.delivery_status = "in_transit"
+        cargo.delivery_updated_at = datetime.now(timezone.utc)
+        cargo.delivery_updated_by = actor.id
+        session.add(CargoStatusEvent(request_id=request_id, actor_id=actor.id, status="in_transit"))
+        parties = await session.execute(select(User).where(User.id.in_([cargo.customer_id, offer.carrier_id])))
+        recipients = [u.telegram_id for u in parties.scalars().all()]
+        actor_name = actor.full_name or "Участник CargoLink"
+        await session.commit()
+    stamp = datetime.now(timezone.utc).strftime("%d.%m.%Y %H:%M UTC")
+    for telegram_id in recipients:
+        await callback.bot.send_message(telegram_id, f"🚚 По заявке №{request_id} статус изменён на «Груз в пути». Изменил: {actor_name}. Время: {stamp}.")
+    await callback.answer("Статус: Груз в пути.")
+    await callback.message.edit_reply_markup(reply_markup=None)
+
+@dp.callback_query(F.data.startswith("delivery:delivered:"))
+async def delivery_delivered(callback: CallbackQuery) -> None:
+    request_id = int(callback.data.rsplit(":", 1)[1])
+    recipients = []
+    actor_name = ""
+    async with SessionLocal() as session:
+        cargo_result = await session.execute(select(CargoRequest).where(CargoRequest.id == request_id))
+        cargo = cargo_result.scalar_one_or_none()
+        user_result = await session.execute(select(User).where(User.telegram_id == callback.from_user.id))
+        actor = user_result.scalar_one_or_none()
+        offer_result = await session.execute(select(CarrierOffer).where(CarrierOffer.request_id == request_id, CarrierOffer.status == "accepted"))
+        offer = offer_result.scalar_one_or_none()
+        allowed = {cargo.customer_id, offer.carrier_id if offer else None} if cargo else set()
+        if not cargo or not actor or actor.id not in allowed:
+            await callback.answer("Нет доступа к изменению статуса этой перевозки.", show_alert=True)
+            return
+        if cargo.delivery_status != "in_transit":
+            await callback.answer("Перевозка уже завершена или статус изменён.", show_alert=True)
+            return
+        cargo.delivery_status = "delivered"
+        cargo.delivery_updated_at = datetime.now(timezone.utc)
+        cargo.delivery_updated_by = actor.id
+        session.add(CargoStatusEvent(request_id=request_id, actor_id=actor.id, status="delivered"))
+        parties = await session.execute(select(User).where(User.id.in_([cargo.customer_id, offer.carrier_id])))
+        recipients = [u.telegram_id for u in parties.scalars().all()]
+        actor_name = actor.full_name or "Участник CargoLink"
+        await session.commit()
+    stamp = datetime.now(timezone.utc).strftime("%d.%m.%Y %H:%M UTC")
+    for telegram_id in recipients:
+        await callback.bot.send_message(telegram_id, f"✅ По заявке №{request_id} статус изменён на «Доставлено». Подтвердил: {actor_name}. Время: {stamp}.")
+    await callback.answer("Перевозка отмечена как доставленная.")
+    await callback.message.edit_reply_markup(reply_markup=None)
 
 @dp.message(F.text == "📨 Мои предложения")
 async def show_my_offers(message: Message) -> None:

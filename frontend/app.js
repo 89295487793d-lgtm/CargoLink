@@ -86,61 +86,37 @@
   }
 
   function bindAddressAutocomplete(inputId, listId) {
-    const input = $(inputId), list = $(listId);
-    if (!input || !list) return;
-    let timer = null, controller = null, lastQuery = "";
-    const close = () => list.classList.add("hidden");
-    const choose = (value) => { input.value = value; close(); input.dispatchEvent(new Event("change", {bubbles:true})); };
-    input.addEventListener("input", () => {
-      const query = input.value.trim();
-      clearTimeout(timer);
-      if (query.length < 3) { close(); return; }
-      timer = setTimeout(async () => {
-        if (query === lastQuery) return;
-        lastQuery = query;
-        controller?.abort();
-        controller = new AbortController();
-        list.innerHTML = '<div class="suggestion-item">Ищем адреса…</div>';
-        list.classList.remove("hidden");
-        try {
-          let options = [];
-          // Primary provider: Photon. Fallback: Nominatim if Photon is unreachable.
-          try {
-            const url = "https://photon.komoot.io/api/?q=" + encodeURIComponent(query) + "&lang=ru&limit=6";
-            const response = await fetch(url, {signal:controller.signal, headers:{Accept:"application/json"}});
-            if (!response.ok) throw new Error("Photon HTTP " + response.status);
-            const data = await response.json();
-            options = (data.features || []).map((feature) => {
-              const p = feature.properties || {};
-              const street = [p.street, p.housenumber].filter(Boolean).join(", ");
-              const locality = p.city || p.town || p.village || p.county || "";
-              return [...new Set([p.name, street, locality, p.state, p.country].filter(Boolean))].join(", ");
-            }).filter(Boolean);
-          } catch (primaryError) {
-            if (primaryError.name === "AbortError") throw primaryError;
-            const fallbackUrl = "https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=6&accept-language=ru&q=" + encodeURIComponent(query);
-            const fallbackResponse = await fetch(fallbackUrl, {signal:controller.signal, headers:{Accept:"application/json"}});
-            if (!fallbackResponse.ok) throw new Error("Address providers unavailable");
-            const fallbackData = await fallbackResponse.json();
-            options = (fallbackData || []).map((item) => item.display_name || "").filter(Boolean);
-          }
-          options = options.filter((value, index, all) => all.indexOf(value) === index).slice(0, 6);
-          if (!options.length) { list.innerHTML = '<div class="suggestion-item">Подсказок нет — можно оставить введённый адрес</div>'; return; }
-          list.innerHTML = options.map((value, index) => '<button type="button" class="suggestion-item" data-index="' + index + '">' + esc(value) + '</button>').join("");
-          list.querySelectorAll("button").forEach((button) => button.addEventListener("click", () => choose(options[Number(button.dataset.index)])));
-        } catch (error) {
-          if (error.name !== "AbortError") { list.innerHTML = '<div class="suggestion-item">Подсказки временно недоступны — введите адрес вручную</div>'; }
-        }
-      }, 350);
+    const input=$(inputId), list=$(listId); if(!input||!list)return;
+    let timer=null,controller=null,lastQuery="";
+    const popularCities=["Москва, Россия","Санкт-Петербург, Россия","Новосибирск, Россия","Екатеринбург, Россия","Казань, Россия","Нижний Новгород, Россия","Краснодар, Россия","Челябинск, Россия","Самара, Россия","Уфа, Россия","Ростов-на-Дону, Россия","Красноярск, Россия","Пермь, Россия","Воронеж, Россия","Волгоград, Россия","Омск, Россия","Тюмень, Россия","Иркутск, Россия","Хабаровск, Россия","Владивосток, Россия","Саратов, Россия","Тольятти, Россия","Ижевск, Россия","Барнаул, Россия","Махачкала, Россия","Ставрополь, Россия","Оренбург, Россия","Ярославль, Россия","Рязань, Россия","Тула, Россия","Калининград, Россия","Кемерово, Россия"];
+    const close=()=>list.classList.add("hidden");
+    const render=values=>{
+      const options=values.filter((v,i,a)=>v&&a.indexOf(v)===i).slice(0,10);
+      if(!options.length)list.innerHTML='<div class="suggestion-item">Ничего не найдено — укажите адрес вручную</div>';
+      else {list.innerHTML=options.map((v,i)=>'<button type="button" class="suggestion-item" data-index="'+i+'">'+esc(v)+'</button>').join("");list.querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{input.value=options[Number(b.dataset.index)];close();input.dispatchEvent(new Event("change",{bubbles:true}));}));}
+      list.classList.remove("hidden");
+    };
+    const popular=q=>{const query=q.trim().toLocaleLowerCase("ru");render(popularCities.filter(city=>!query||city.toLocaleLowerCase("ru").includes(query)));};
+    input.addEventListener("focus",()=>{if(input.value.trim().length<3)popular(input.value);});
+    input.addEventListener("input",()=>{
+      const query=input.value.trim();clearTimeout(timer);
+      if(query.length<3){controller?.abort();lastQuery="";popular(query);return;}
+      timer=setTimeout(async()=>{
+        if(query===lastQuery)return;lastQuery=query;controller?.abort();controller=new AbortController();
+        const q=query.toLocaleLowerCase("ru"),priority=popularCities.filter(city=>city.toLocaleLowerCase("ru").startsWith(q)||city.toLocaleLowerCase("ru").includes(q));
+        list.innerHTML='<div class="suggestion-item">Ищем города и адреса…</div>';list.classList.remove("hidden");
+        try{
+          const url="https://photon.komoot.io/api/?q="+encodeURIComponent(query)+"&lang=ru&limit=10";
+          const response=await fetch(url,{signal:controller.signal,headers:{Accept:"application/json"}});
+          if(!response.ok)throw new Error("Geocoder unavailable");
+          const data=await response.json();
+          const found=(data.features||[]).map(feature=>{const p=feature.properties||{},locality=p.city||p.town||p.village||p.county||"",name=p.name||locality,street=[p.street,p.housenumber].filter(Boolean).join(", ");return [...new Set([name,street,locality,p.state,p.country].filter(Boolean))].join(", ");});
+          render([...priority,...found]);
+        }catch(error){if(error.name!=="AbortError")render(priority);}
+      },280);
     });
-    input.addEventListener("keydown", (event) => {
-      if (event.key === "Escape") close();
-      if (event.key === "Enter" && !list.classList.contains("hidden")) {
-        const first = list.querySelector("button");
-        if (first) { event.preventDefault(); first.click(); }
-      }
-    });
-    document.addEventListener("click", (event) => { if (!list.contains(event.target) && event.target !== input) close(); });
+    input.addEventListener("keydown",event=>{if(event.key==="Escape")close();if(event.key==="Enter"&&!list.classList.contains("hidden")){const first=list.querySelector("button");if(first){event.preventDefault();first.click();}}});
+    document.addEventListener("click",event=>{if(!list.contains(event.target)&&event.target!==input)close();});
   }
 
   function applyCargoSuggestions() {

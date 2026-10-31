@@ -29,3 +29,75 @@ select,textarea{width:100%;min-width:0;border:1px solid #dce4ef;border-radius:11
 
 /* Vehicle search dropdown shares cargo directory styling */
 #f-vehicle-search{width:100%;box-sizing:border-box}
+
+
+/* Cross-platform mobile polish: iOS + Android */
+:root{
+  --blue:#1769ff;
+  --navy:#10213f;
+  --line:#e5eaf2;
+  --panel:#ffffff;
+  -webkit-tap-highlight-color:transparent;
+}
+html{min-height:100%;background:#f3f6fb;scroll-behavior:smooth}
+body{min-height:100vh;min-height:100dvh;-webkit-text-size-adjust:100%;overscroll-behavior-y:contain}
+.app-shell{
+  width:100%;max-width:680px;
+  padding-left:max(16px,env(safe-area-inset-left));
+  padding-right:max(16px,env(safe-area-inset-right));
+  padding-top:max(14px,env(safe-area-inset-top));
+  padding-bottom:max(28px,env(safe-area-inset-bottom));
+}
+input,select,textarea,button{font-family:inherit}
+input,select,textarea{min-height:46px;font-size:16px; /* prevents iOS zoom on focus */}
+textarea{min-height:88px}
+button,.tab,.quick-routes button,.suggestion-item,.cargo-result,.request-card{
+  touch-action:manipulation;
+  -webkit-appearance:none;
+}
+.primary,.secondary{min-height:50px;border-radius:14px}
+.primary{background:linear-gradient(135deg,#1769ff,#0e57dc);box-shadow:0 7px 18px #1769ff26}
+.tab{min-height:44px}
+.search-panel,.detail,.request-card{border-color:#e7ecf4;box-shadow:0 6px 22px rgba(20,39,72,.055)}
+.search-panel{padding:clamp(14px,3.8vw,20px);border-radius:22px}
+.search-panel h3{margin-top:20px;padding-top:15px;font-size:14px;letter-spacing:.1px}
+label{font-size:12px;gap:7px}
+input,select,textarea{border-color:#dfe6f0;border-radius:13px;background:#f9fbfe;padding:12px;color:#17243a}
+input:focus,select:focus,textarea:focus{border-color:#78a7ff;box-shadow:0 0 0 3px rgba(23,105,255,.12);outline:none}
+input[type="date"]{min-height:46px}
+.field-row{gap:10px}
+.form-intro{padding-top:16px}
+.form-intro h2{font-size:29px;letter-spacing:-.7px}
+.preview-route{border:1px solid #e5edfb;background:linear-gradient(135deg,#f5f8ff,#edf4ff);border-radius:16px}
+.preview-price{align-items:flex-start;flex-direction:column;gap:5px;padding:12px;border:1px solid #e8edf5;border-radius:14px;background:#fbfcff}
+.preview-price strong{font-size:23px}
+.preview-price span{font-size:12px;color:#53647f}
+.cargo-results,.suggestions{border-color:#e3eaf4;border-radius:14px;box-shadow:0 14px 30px rgba(20,39,72,.13)}
+.cargo-result,.suggestion-item{min-height:46px;padding:13px 14px}
+.request-card{border-radius:18px;padding:16px}
+.route{line-height:1.45}
+.detail{border-radius:20px}
+:focus-visible{outline:3px solid rgba(23,105,255,.35);outline-offset:2px}
+@media(max-width:430px){
+  .app-shell{padding-left:14px;padding-right:14px}
+  .topbar{padding-bottom:14px}
+  .hero{padding:21px 18px;border-radius:20px}
+  .hero h2{font-size:29px}
+  .field-row{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .field-row>label{min-width:0}
+  .preview-route{font-size:clamp(12px,3.4vw,15px);gap:6px;overflow-wrap:anywhere}
+  .preview-grid{grid-template-columns:minmax(90px,.8fr) minmax(0,1.5fr);gap:9px}
+}
+@media(max-width:350px){
+  .app-shell{padding-left:11px;padding-right:11px}
+  .field-row{grid-template-columns:1fr}
+  .preview-price strong{font-size:20px}
+}
+@media(min-width:600px){
+  .app-shell{padding-top:max(24px,env(safe-area-inset-top))}
+  .search-panel{padding:22px}
+}
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}
+}

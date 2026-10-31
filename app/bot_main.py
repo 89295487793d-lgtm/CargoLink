@@ -161,9 +161,13 @@ async def begin_placement(message: Message, state: FSMContext) -> None:
         await message.answer("Сначала завершите регистрацию командой /start.")
         return
     await state.clear()
-    await state.set_state(PlacementForm.origin)
-    await message.answer("📍 Укажите город и адрес загрузки:", reply_markup=ReplyKeyboardRemove())
-
+    if not settings.webapp_url.startswith("https://"):
+        await message.answer("Форма создания заявки пока недоступна: проверьте HTTPS-адрес WEBAPP_URL.")
+        return
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="📦 Открыть форму создания заявки", web_app=WebAppInfo(url=settings.webapp_url.rstrip("/") + "/?mode=create"))
+    ]])
+    await message.answer("Заполните заявку в CargoLink. Перед публикацией вы сможете проверить карточку и вернуться к редактированию.", reply_markup=keyboard)
 
 @dp.message(PlacementForm.origin)
 async def placement_origin(message: Message, state: FSMContext) -> None:

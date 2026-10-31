@@ -625,31 +625,90 @@ async def open_cargo_chat(callback: CallbackQuery, state: FSMContext) -> None:
     await state.set_state(ChatForm.active)
     await state.update_data(chat_id=chat_id)
     chat_menu = ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text="🔚 Завершить переписку")]],
+        keyboard=[[KeyboardButton(text="↩️ Выйти из чата")]],
         resize_keyboard=True,
     )
+    finish_keyboard = InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="🔒 Завершить переписку", callback_data=f"chat:finish:ask:{chat_id}")
+    ]])
     await callback.message.answer(
         f"💬 Переписка по заявке №{chat.request_id}\n"
         f"Маршрут: {cargo.origin if cargo else ''} → {cargo.destination if cargo else ''}\n"
         f"Собеседник: {other.full_name if other else 'участник CargoLink'}\n\n"
-        "Отправляйте сообщения обычным текстом. Они будут доставляться второму участнику.",
+        "Можно отправлять текст, фотографии, PDF и другие документы. "
+        "Вложения будут доставлены второму участнику.",
         reply_markup=chat_menu,
     )
+    await callback.message.answer("Управление перепиской:", reply_markup=finish_keyboard)
     if history:
         lines = ["Последние сообщения:"]
         for item in history:
             sender = "Вы" if item.sender_id == user.id else (other.full_name if other else "Собеседник")
-            lines.append(f"{sender}: {item.body}")
+            stamp = item.created_at.strftime("%d.%m %H:%M") if item.created_at else ""
+            lines.append(f"[{stamp}] {sender}: {item.body}")
         await callback.message.answer("\n".join(lines))
     else:
-        await callback.message.answer("Переписка пока пустая. Напишите первое сообщение.")
+        await callback.message.answer("Переписка пока пустая. Напишите первое сообщение или отправьте файл.")
     await callback.answer()
 
 
-@dp.message(ChatForm.active, F.text == "🔚 Завершить переписку")
+@dp.message(ChatForm.active, F.text == "↩️ Выйти из чата")
 async def close_chat_view(message: Message, state: FSMContext) -> None:
     await state.clear()
     await message.answer("Вы вышли из режима переписки. История сохранена.", reply_markup=MAIN_MENU)
+
+
+@dp.callback_query(F.data.startswith("chat:finish:ask:"))
+async def ask_finish_cargo_chat(callback: CallbackQuery) -> None:
+    chat_id = int(callback.data.rsplit(":", 1)[1])
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="Да, завершить", callback_data=f"chat:finish:confirm:{chat_id}"),
+        InlineKeyboardButton(text="Отмена", callback_data=f"chat:finish:cancel:{chat_id}"),
+    ]])
+    await callback.message.answer(
+        "Завершить переписку по этой заявке? После подтверждения отправка новых сообщений будет отключена для обоих участников.",
+        reply_markup=keyboard,
+    )
+    await callback.answer()
+
+
+@dp.callback_query(F.data.startswith("chat:finish:cancel:"))
+async def cancel_finish_cargo_chat(callback: CallbackQuery) -> None:
+    await callback.answer("Переписка остаётся активной.")
+
+
+@dp.callback_query(F.data.startswith("chat:finish:confirm:"))
+async def finish_cargo_chat(callback: CallbackQuery, state: FSMContext) -> None:
+    chat_id = int(callback.data.rsplit(":", 1)[1])
+    participant_ids = []
+    request_id = None
+    async with SessionLocal() as session:
+        result = await session.execute(select(CargoChat).where(CargoChat.id == chat_id))
+        chat = result.scalar_one_or_none()
+        user_result = await session.execute(select(User).where(User.telegram_id == callback.from_user.id))
+        user = user_result.scalar_one_or_none()
+        if not chat or not user or user.id not in {chat.customer_id, chat.carrier_id}:
+            await callback.answer("Нет доступа к этой переписке.", show_alert=True)
+            return
+        if chat.status != "active":
+            await callback.answer("Переписка уже завершена.", show_alert=True)
+            return
+        chat.status = "closed"
+        participant_ids = [chat.customer_id, chat.carrier_id]
+        request_id = chat.request_id
+        await session.commit()
+        users_result = await session.execute(select(User).where(User.id.in_(participant_ids)))
+        recipients = users_result.scalars().all()
+        telegram_ids = [item.telegram_id for item in recipients]
+    await state.clear()
+    await callback.message.answer(f"🔒 Переписка по заявке №{request_id} завершена.", reply_markup=MAIN_MENU)
+    for telegram_id in telegram_ids:
+        if telegram_id != callback.from_user.id:
+            try:
+                await callback.bot.send_message(telegram_id, f"🔒 Переписка по заявке №{request_id} завершена вторым участником.")
+            except Exception:
+                logger.exception("Could not notify participant that chat %s was closed", chat_id)
+    await callback.answer("Переписка завершена.")
 
 
 @dp.message(ChatForm.active, F.text)
@@ -677,7 +736,7 @@ async def relay_chat_message(message: Message, state: FSMContext) -> None:
         if not body or len(body) > 4000:
             await message.answer("Сообщение должно содержать от 1 до 4000 символов.")
             return
-        record = CargoChatMessage(chat_id=chat.id, sender_id=sender.id, body=body)
+        record = CargoChatMessage(chat_id=chat.id, sender_id=sender.id, body=body, content_type="text")
         session.add(record)
         await session.commit()
         recipient_chat_id = recipient.telegram_id
@@ -686,12 +745,82 @@ async def relay_chat_message(message: Message, state: FSMContext) -> None:
     try:
         await message.bot.send_message(
             recipient_chat_id,
-            f"💬 Сообщение по заявке №{request_id}\n{sender_name}:\n{body}",
+            f"💬 Заявка №{request_id} · {sender_name}:\n{body}",
         )
         await message.answer("✓ Доставлено.")
     except Exception:
         logger.exception("Could not relay chat message for chat %s", chat_id)
         await message.answer("Сообщение сохранено, но Telegram не подтвердил доставку. Попробуйте позже.")
+
+
+@dp.message(
+    ChatForm.active,
+    F.photo | F.document | F.video | F.audio | F.voice | F.video_note | F.animation | F.sticker,
+)
+async def relay_chat_attachment(message: Message, state: FSMContext) -> None:
+    if not message.from_user:
+        return
+    data = await state.get_data()
+    chat_id = data.get("chat_id")
+    content_type = message.content_type.value if hasattr(message.content_type, "value") else str(message.content_type)
+    media = None
+    if message.photo:
+        media = message.photo[-1]
+    else:
+        for field in ("document", "video", "audio", "voice", "video_note", "animation", "sticker"):
+            candidate = getattr(message, field, None)
+            if candidate:
+                media = candidate
+                break
+    file_id = media.file_id if media else None
+    caption = (message.caption or "").strip()[:1000]
+    labels = {
+        "photo": "Фотография", "document": "Документ", "video": "Видео",
+        "audio": "Аудио", "voice": "Голосовое сообщение", "video_note": "Видеосообщение",
+        "animation": "Анимация", "sticker": "Стикер",
+    }
+    body = caption or f"[{labels.get(content_type, 'Вложение')}]"
+    async with SessionLocal() as session:
+        chat_result = await session.execute(select(CargoChat).where(CargoChat.id == chat_id, CargoChat.status == "active"))
+        chat = chat_result.scalar_one_or_none()
+        sender_result = await session.execute(select(User).where(User.telegram_id == message.from_user.id))
+        sender = sender_result.scalar_one_or_none()
+        if not chat or not sender or sender.id not in {chat.customer_id, chat.carrier_id}:
+            await state.clear()
+            await message.answer("Переписка недоступна. Откройте её заново из раздела сделок.", reply_markup=MAIN_MENU)
+            return
+        recipient_id = chat.carrier_id if sender.id == chat.customer_id else chat.customer_id
+        recipient_result = await session.execute(select(User).where(User.id == recipient_id))
+        recipient = recipient_result.scalar_one_or_none()
+        if not recipient:
+            await message.answer("Не удалось найти второго участника переписки.")
+            return
+        record = CargoChatMessage(
+            chat_id=chat.id, sender_id=sender.id, body=body,
+            content_type=content_type, file_id=file_id,
+        )
+        session.add(record)
+        await session.commit()
+        recipient_telegram_id = recipient.telegram_id
+        sender_name = sender.full_name or "Участник CargoLink"
+        request_id = chat.request_id
+    try:
+        await message.bot.send_message(
+            recipient_telegram_id,
+            f"📎 Вложение по заявке №{request_id} от {sender_name}: {labels.get(content_type, 'Файл')}",
+        )
+        await message.bot.copy_message(
+            chat_id=recipient_telegram_id,
+            from_chat_id=message.chat.id,
+            message_id=message.message_id,
+        )
+        await message.answer("✓ Вложение доставлено.")
+    except Exception:
+        logger.exception("Could not relay attachment for chat %s", chat_id)
+        await message.answer("Вложение сохранено в истории, но Telegram не подтвердил доставку.")
+
+
+
 
 
 @dp.callback_query(F.data.startswith("offer:reject:"))

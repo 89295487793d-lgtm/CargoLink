@@ -47,6 +47,8 @@ services:
     environment:
       BOT_TOKEN: ${BOT_TOKEN:-}
       WEBAPP_URL: ${WEBAPP_URL:-}
+      CODESPACE_NAME: ${CODESPACE_NAME:-}
+      GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN: ${GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN:-app.github.dev}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       DATABASE_URL: postgresql+asyncpg://cargolink:${POSTGRES_PASSWORD:-cargolink_local_password}@db:5432/cargolink
     depends_on:

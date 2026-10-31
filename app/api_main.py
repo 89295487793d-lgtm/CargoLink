@@ -58,6 +58,7 @@ class CreateRequest(BaseModel):
     unloading_date: str | None = Field(default=None, max_length=100)
     price_rub: str | None = Field(default=None, max_length=100)
     vat_mode: str = Field(pattern="^(С НДС|Без НДС)$")
+    payment_method: str = Field(default="Безналичный расчёт", pattern="^(Безналичный расчёт|Наличные|Запрос)$")
     comment: str | None = Field(default=None, max_length=1000)
 
 
@@ -105,6 +106,7 @@ async def create_request(payload: CreateRequest, x_telegram_init_data: str = Hea
             unloading_date=payload.unloading_date,
             price_rub=payload.price_rub,
             vat_mode=payload.vat_mode,
+            payment_method=payload.payment_method,
             comment=payload.comment,
             status="open",
         )

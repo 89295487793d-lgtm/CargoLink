@@ -103,16 +103,28 @@
         list.innerHTML = '<div class="suggestion-item">Ищем адреса…</div>';
         list.classList.remove("hidden");
         try {
-          const url = "https://photon.komoot.io/api/?q=" + encodeURIComponent(query) + "&lang=ru&limit=6";
-          const response = await fetch(url, {signal:controller.signal});
-          if (!response.ok) throw new Error("Geocoder unavailable");
-          const data = await response.json();
-          const options = (data.features || []).map((feature) => {
-            const p = feature.properties || {};
-            const street = [p.street, p.housenumber].filter(Boolean).join(", ");
-            const locality = p.city || p.town || p.village || p.county || "";
-            return [...new Set([p.name, street, locality, p.state, p.country].filter(Boolean))].join(", ");
-          }).filter(Boolean).filter((value, index, all) => all.indexOf(value) === index).slice(0, 6);
+          let options = [];
+          // Primary provider: Photon. Fallback: Nominatim if Photon is unreachable.
+          try {
+            const url = "https://photon.komoot.io/api/?q=" + encodeURIComponent(query) + "&lang=ru&limit=6";
+            const response = await fetch(url, {signal:controller.signal, headers:{Accept:"application/json"}});
+            if (!response.ok) throw new Error("Photon HTTP " + response.status);
+            const data = await response.json();
+            options = (data.features || []).map((feature) => {
+              const p = feature.properties || {};
+              const street = [p.street, p.housenumber].filter(Boolean).join(", ");
+              const locality = p.city || p.town || p.village || p.county || "";
+              return [...new Set([p.name, street, locality, p.state, p.country].filter(Boolean))].join(", ");
+            }).filter(Boolean);
+          } catch (primaryError) {
+            if (primaryError.name === "AbortError") throw primaryError;
+            const fallbackUrl = "https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=6&accept-language=ru&q=" + encodeURIComponent(query);
+            const fallbackResponse = await fetch(fallbackUrl, {signal:controller.signal, headers:{Accept:"application/json"}});
+            if (!fallbackResponse.ok) throw new Error("Address providers unavailable");
+            const fallbackData = await fallbackResponse.json();
+            options = (fallbackData || []).map((item) => item.display_name || "").filter(Boolean);
+          }
+          options = options.filter((value, index, all) => all.indexOf(value) === index).slice(0, 6);
           if (!options.length) { list.innerHTML = '<div class="suggestion-item">Подсказок нет — можно оставить введённый адрес</div>'; return; }
           list.innerHTML = options.map((value, index) => '<button type="button" class="suggestion-item" data-index="' + index + '">' + esc(value) + '</button>').join("");
           list.querySelectorAll("button").forEach((button) => button.addEventListener("click", () => choose(options[Number(button.dataset.index)])));

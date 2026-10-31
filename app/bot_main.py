@@ -287,7 +287,32 @@ async def show_profile(message: Message) -> None:
 
 @dp.message(F.text == "🚚 Найти груз")
 async def find_loads(message: Message) -> None:
-    await message.answer("Поиск и фильтры грузов подключим следующим этапом.", reply_markup=MAIN_MENU)
+    async with SessionLocal() as session:
+        result = await session.execute(
+            select(CargoRequest)
+            .where(CargoRequest.status == "open")
+            .order_by(CargoRequest.created_at.desc())
+            .limit(10)
+        )
+        requests = result.scalars().all()
+
+    if not requests:
+        await message.answer("Пока открытых заявок нет.", reply_markup=MAIN_MENU)
+        return
+
+    lines = ["🚚 Открытые заявки CargoLink:", ""]
+    for item in requests:
+        lines.append(
+            f"Заявка №{item.id}\n"
+            f"Маршрут: {item.origin} → {item.destination}\n"
+            f"Груз: {item.cargo}\n"
+            f"Масса: {item.weight_tons:g} т\n"
+            f"Транспорт: {item.vehicle_type}\n"
+            f"Дата загрузки: {item.pickup_date}\n"
+            f"Ставка: {item.price_rub or 'по договорённости'}\n"
+        )
+    lines.append("Показаны последние 10 открытых заявок.")
+    await message.answer("\n".join(lines), reply_markup=MAIN_MENU)
 
 
 @dp.message(F.text == "🚛 Свободные автомобили")

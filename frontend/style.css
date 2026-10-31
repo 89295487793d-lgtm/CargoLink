@@ -130,3 +130,6 @@ input[type="date"]{min-height:46px}
 .date-fields{display:grid;grid-template-columns:minmax(0,1fr);gap:2px}
 .date-fields>label{width:100%;min-width:0}
 .date-fields input[type="date"]{width:100%;max-width:100%;min-width:0}
+
+
+.required-star{color:#e53935;font-weight:900;margin-left:2px}

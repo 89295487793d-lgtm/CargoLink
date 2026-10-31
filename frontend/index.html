@@ -8,9 +8,45 @@
 <body>
 <main class="app-shell">
 <header class="topbar"><div class="brand-mark">CL</div><div><p class="eyebrow">LOGISTICS PLATFORM</p><h1>CargoLink</h1></div><span class="live-dot">● Онлайн</span></header>
-<section class="hero" id="market-hero"><p class="eyebrow">CARGOLINK MARKETPLACE</p><h2>Найти груз</h2><p>Актуальные заявки на перевозку наливных и сухих грузов</p></section>
+<section class="hero hidden" id="market-hero"><p class="eyebrow">CARGOLINK MARKETPLACE</p><h2>Найти груз</h2><p>Актуальные заявки на перевозку наливных и сухих грузов</p></section>
 
-<section id="create-flow" class="hidden">
+<section id="home-screen" class="home-screen">
+  <section class="home-hero">
+    <div class="home-hero-copy">
+      <p class="eyebrow">CARGOLINK · LOGISTICS MARKETPLACE</p>
+      <h2>Грузы и транспорт.<br><span>В одном месте.</span></h2>
+      <p>Находите перевозки, размещайте заявки и управляйте доставкой на единой платформе.</p>
+      <div class="home-hero-actions">
+        <button type="button" class="primary" id="home-find">Найти груз</button>
+        <button type="button" class="home-secondary" id="home-create">＋ Разместить заявку</button>
+      </div>
+    </div>
+    <div class="home-visual" aria-hidden="true">
+      <div class="route-line"></div><div class="route-node route-node-a">⌖</div><div class="route-node route-node-b">⌖</div>
+      <div class="route-label route-label-a">Загрузка</div><div class="route-label route-label-b">Доставка</div>
+      <div class="truck-visual">🚚</div>
+    </div>
+  </section>
+  <section class="home-stats">
+    <div class="home-stat"><span class="stat-icon">▤</span><div><strong id="home-open-count">—</strong><span>Открытых заявок</span></div></div>
+    <div class="home-stat"><span class="stat-icon">↗</span><div><strong>24/7</strong><span>Доступ к платформе</span></div></div>
+    <div class="home-stat"><span class="stat-icon">⇄</span><div><strong>Единый</strong><span>Цикл перевозки</span></div></div>
+  </section>
+  <section class="home-section">
+    <div class="home-section-heading"><div><p class="eyebrow">БЫСТРЫЙ ДОСТУП</p><h3>Что хотите сделать?</h3></div></div>
+    <div class="home-actions-grid">
+      <button type="button" class="home-action-card" id="home-find-card"><span class="action-icon blue-icon">⌕</span><strong>Найти груз</strong><small>Подобрать заявку и предложить ставку</small><span class="action-arrow">→</span></button>
+      <button type="button" class="home-action-card" id="home-create-card"><span class="action-icon orange-icon">＋</span><strong>Разместить заявку</strong><small>Найти перевозчика для вашего груза</small><span class="action-arrow">→</span></button>
+    </div>
+  </section>
+  <section class="home-section home-benefits">
+    <div class="home-section-heading"><div><p class="eyebrow">ПЛАТФОРМА CARGOLINK</p><h3>Весь процесс под контролем</h3></div></div>
+    <div class="benefit-row"><span>01</span><div><strong>Поиск и подбор</strong><p>Открытые заявки на перевозку грузов и удобный поиск по маршруту.</p></div></div>
+    <div class="benefit-row"><span>02</span><div><strong>Ставки и выбор перевозчика</strong><p>Получайте предложения и выбирайте подходящие условия перевозки.</p></div></div>
+    <div class="benefit-row"><span>03</span><div><strong>Контроль доставки</strong><p>От подтверждения заказа до завершения перевозки и истории статусов.</p></div></div>
+  </section>
+</section>
+\n<section id="create-flow" class="hidden">
   <section class="form-intro"><p class="eyebrow">НОВАЯ ЗАЯВКА</p><h2>Создать заявку</h2><p>Заполните параметры перевозки. Перед публикацией вы сможете проверить карточку.</p></section>
   <form id="create-form" class="search-panel">
     <h3>Маршрут</h3>
@@ -283,15 +319,15 @@
   <section id="preview" class="detail hidden"></section>
 </section>
 
-<section class="search-panel" id="market-search">
+<section class="search-panel hidden" id="market-search">
 <div class="tabs" role="tablist"><button class="tab active" data-category="all">Все</button><button class="tab" data-category="liquid">Наливные</button><button class="tab" data-category="dry">Сухие</button></div>
 <label>Откуда<input id="origin" placeholder="Город отправления"></label><label>Куда<input id="destination" placeholder="Город назначения"></label>
 <div class="field-row"><label>Тип груза<input id="cargo" placeholder="Например, дизель"></label><label>Транспорт<input id="vehicle" placeholder="Цистерна"></label></div>
 <button class="primary" id="search">⌕ Найти грузы</button>
 <div class="quick-routes"><span>Быстрые направления</span><button data-route="Москва|Казань">Москва → Казань</button><button data-route="Москва|Санкт-Петербург">Москва → Санкт-Петербург</button><button data-route="Тюмень|Москва">Тюмень → Москва</button></div>
 </section>
-<section class="results-head" id="market-results-head"><div><p class="eyebrow">MARKETPLACE</p><h3>Результаты поиска</h3></div><span id="count" class="count">Загрузка…</span></section>
-<section id="results" class="results"><div class="empty">Загружаем открытые заявки…</div></section>
+<section class="results-head hidden" id="market-results-head"><div><p class="eyebrow">MARKETPLACE</p><h3>Результаты поиска</h3></div><span id="count" class="count">Загрузка…</span></section>
+<section id="results" class="results hidden"><div class="empty">Загружаем открытые заявки…</div></section>
 <section id="detail" class="detail hidden"></section>
 <footer>CargoLink · Единая платформа грузов и транспорта</footer>
 </main>

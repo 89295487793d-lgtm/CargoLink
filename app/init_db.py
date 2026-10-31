@@ -18,6 +18,12 @@ async def main() -> None:
         await connection.execute(text("ALTER TABLE cargo_requests ADD COLUMN IF NOT EXISTS delivery_status VARCHAR(30) NOT NULL DEFAULT 'pending'"))
         await connection.execute(text("ALTER TABLE cargo_requests ADD COLUMN IF NOT EXISTS delivery_updated_at TIMESTAMPTZ"))
         await connection.execute(text("ALTER TABLE cargo_requests ADD COLUMN IF NOT EXISTS delivery_updated_by INTEGER REFERENCES users(id)"))
+        await connection.execute(text("ALTER TABLE cargo_requests ADD COLUMN IF NOT EXISTS cargo_category VARCHAR(20)"))
+        await connection.execute(text("ALTER TABLE cargo_requests ADD COLUMN IF NOT EXISTS volume_m3 DOUBLE PRECISION"))
+        await connection.execute(text("ALTER TABLE cargo_requests ADD COLUMN IF NOT EXISTS vat_mode VARCHAR(20)"))
+        await connection.execute(text("ALTER TABLE cargo_requests ADD COLUMN IF NOT EXISTS unloading_date VARCHAR(100)"))
+        await connection.execute(text("ALTER TABLE cargo_requests ADD COLUMN IF NOT EXISTS adr_class VARCHAR(10)"))
+        await connection.execute(text("ALTER TABLE cargo_requests ADD COLUMN IF NOT EXISTS comment VARCHAR(1000)"))
         await connection.execute(text("UPDATE cargo_requests SET delivery_status = 'accepted' WHERE status = 'closed' AND EXISTS (SELECT 1 FROM carrier_offers WHERE carrier_offers.request_id = cargo_requests.id AND carrier_offers.status = 'accepted')"))
     # Backfill private chats for accepted offers created before the chat feature.
     async with SessionLocal() as session:

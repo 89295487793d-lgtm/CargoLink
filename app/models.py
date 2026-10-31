@@ -27,7 +27,7 @@ class CargoRequest(Base):
     pickup_date: Mapped[str] = mapped_column(String(100))
     price_rub: Mapped[str | None] = mapped_column(String(100), nullable=True)
     status: Mapped[str] = mapped_column(String(30), default="open", index=True)
-    delivery_status: Mapped[str] = mapped_column(String(30), default="accepted", index=True)
+    delivery_status: Mapped[str] = mapped_column(String(30), default="pending", index=True)
     delivery_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     delivery_updated_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

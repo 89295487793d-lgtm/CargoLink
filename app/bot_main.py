@@ -49,6 +49,7 @@ def main_menu() -> ReplyKeyboardMarkup:
     rows.extend([
         [KeyboardButton(text="🚚 Найти груз"), KeyboardButton(text="📦 Разместить заявку")],
         [KeyboardButton(text="🚛 Свободные автомобили"), KeyboardButton(text="👤 Мой профиль")],
+        [KeyboardButton(text="📦 Мои перевозки")],
         [KeyboardButton(text="📨 Мои предложения"), KeyboardButton(text="📋 Мои заявки")],
     ])
     return ReplyKeyboardMarkup(keyboard=rows, resize_keyboard=True, input_field_placeholder="Выберите раздел CargoLink")
@@ -79,6 +80,7 @@ MENU_TEXTS = {
     "👤 Мой профиль",
     "📨 Мои предложения",
     "📋 Мои заявки",
+    "📦 Мои перевозки",
 }
 
 
@@ -100,6 +102,8 @@ async def interrupt_form_with_menu(message: Message, state: FSMContext) -> None:
         await show_my_offers(message)
     elif message.text == "📋 Мои заявки":
         await show_my_requests(message)
+    elif message.text == "📦 Мои перевозки":
+        await show_my_shipments(message)
 
 
 @dp.message(CommandStart())
@@ -633,9 +637,12 @@ async def open_cargo_chat(callback: CallbackQuery, state: FSMContext) -> None:
         keyboard=[[KeyboardButton(text="↩️ Выйти из чата")]],
         resize_keyboard=True,
     )
-    finish_keyboard = InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text="🔒 Завершить переписку", callback_data=f"chat:finish:ask:{chat_id}")
-    ]])
+    chat_control_rows = [[InlineKeyboardButton(text="🔒 Завершить переписку", callback_data=f"chat:finish:ask:{chat_id}")]]
+    if cargo and cargo.delivery_status == "accepted" and user.id == chat.carrier_id:
+        chat_control_rows.append([InlineKeyboardButton(text="🚚 Загрузка", callback_data=f"delivery:loading:{chat.request_id}")])
+    elif cargo and cargo.delivery_status == "in_transit" and user.id in {chat.customer_id, chat.carrier_id}:
+        chat_control_rows.append([InlineKeyboardButton(text="✅ Доставлено", callback_data=f"delivery:delivered:{chat.request_id}")])
+    finish_keyboard = InlineKeyboardMarkup(inline_keyboard=chat_control_rows)
     await callback.message.answer(
         f"💬 Переписка по заявке №{chat.request_id}\n"
         f"Маршрут: {cargo.origin if cargo else ''} → {cargo.destination if cargo else ''}\n"
@@ -1001,6 +1008,118 @@ async def show_my_requests(message: Message) -> None:
             keyboard_rows.append([InlineKeyboardButton(text="✅ Доставлено", callback_data=f"delivery:delivered:{cargo.id}")])
         keyboard = InlineKeyboardMarkup(inline_keyboard=keyboard_rows) if keyboard_rows else MAIN_MENU
         await message.answer("\n".join(lines), reply_markup=keyboard)
+
+
+@dp.message(F.text == "📦 Мои перевозки")
+async def show_my_shipments(message: Message) -> None:
+    """Unified workspace for accepted shipments for both customers and carriers."""
+    if not message.from_user:
+        return
+    async with SessionLocal() as session:
+        user_result = await session.execute(select(User).where(User.telegram_id == message.from_user.id))
+        user = user_result.scalar_one_or_none()
+        if not user:
+            await message.answer("Сначала отправьте /start.")
+            return
+        chat_result = await session.execute(
+            select(CargoChat).where(
+                (CargoChat.customer_id == user.id) | (CargoChat.carrier_id == user.id)
+            ).order_by(CargoChat.created_at.desc()).limit(50)
+        )
+        chats = chat_result.scalars().all()
+        records = []
+        for chat in chats:
+            cargo_result = await session.execute(select(CargoRequest).where(CargoRequest.id == chat.request_id))
+            cargo = cargo_result.scalar_one_or_none()
+            offer_result = await session.execute(select(CarrierOffer).where(CarrierOffer.id == chat.offer_id))
+            offer = offer_result.scalar_one_or_none()
+            other_id = chat.carrier_id if user.id == chat.customer_id else chat.customer_id
+            other_result = await session.execute(select(User).where(User.id == other_id))
+            other = other_result.scalar_one_or_none()
+            if cargo and offer:
+                records.append((chat, cargo, offer, other))
+    if not records:
+        await message.answer("📦 Принятых перевозок пока нет. Они появятся здесь после принятия ставки.", reply_markup=MAIN_MENU)
+        return
+    await message.answer("📦 МОИ ПЕРЕВОЗКИ\nВыберите перевозку для управления:", reply_markup=MAIN_MENU)
+    status_names = {"accepted": "🟡 Заявка принята", "in_transit": "🚚 Груз в пути", "delivered": "✅ Доставлено"}
+    for chat, cargo, offer, other in records:
+        role = "Заказчик" if user.id == chat.customer_id else "Перевозчик"
+        card = (
+            f"📦 Перевозка №{cargo.id}\n"
+            f"Роль: {role}\n"
+            f"Маршрут: {cargo.origin} → {cargo.destination}\n"
+            f"Груз: {cargo.cargo} · {cargo.weight_tons:g} т\n"
+            f"Ставка: {offer.price_rub:,.2f} ₽ · {offer.vat_mode}\n"
+            f"Транспорт: {offer.vehicle_type}\n"
+            f"Вторая сторона: {other.full_name if other else 'участник CargoLink'}\n"
+            f"Статус: {status_names.get(cargo.delivery_status, cargo.delivery_status)}\n"
+            f"Чат: {'активен' if chat.status == 'active' else 'завершён'}"
+        )
+        rows = [[InlineKeyboardButton(text="📋 Управление перевозкой", callback_data=f"shipment:open:{cargo.id}")]]
+        await message.answer(card, reply_markup=InlineKeyboardMarkup(inline_keyboard=rows))
+
+
+@dp.callback_query(F.data.startswith("shipment:open:"))
+async def open_shipment_control(callback: CallbackQuery) -> None:
+    request_id = int(callback.data.rsplit(":", 1)[1])
+    async with SessionLocal() as session:
+        user_result = await session.execute(select(User).where(User.telegram_id == callback.from_user.id))
+        user = user_result.scalar_one_or_none()
+        chat_result = await session.execute(
+            select(CargoChat).where(
+                CargoChat.request_id == request_id,
+                ((CargoChat.customer_id == user.id) | (CargoChat.carrier_id == user.id)) if user else False
+            ).order_by(CargoChat.created_at.desc()).limit(1)
+        )
+        chat = chat_result.scalar_one_or_none()
+        cargo_result = await session.execute(select(CargoRequest).where(CargoRequest.id == request_id))
+        cargo = cargo_result.scalar_one_or_none()
+        offer_result = await session.execute(
+            select(CarrierOffer).where(CarrierOffer.request_id == request_id, CarrierOffer.status == "accepted")
+        )
+        offer = offer_result.scalar_one_or_none()
+        if not user or not chat or not cargo or not offer:
+            await callback.answer("Перевозка не найдена или нет доступа.", show_alert=True)
+            return
+        other_id = chat.carrier_id if user.id == chat.customer_id else chat.customer_id
+        other_result = await session.execute(select(User).where(User.id == other_id))
+        other = other_result.scalar_one_or_none()
+        event_result = await session.execute(
+            select(CargoStatusEvent, User).join(User, User.id == CargoStatusEvent.actor_id)
+            .where(CargoStatusEvent.request_id == request_id)
+            .order_by(CargoStatusEvent.created_at.desc()).limit(10)
+        )
+        events = event_result.all()
+    names = {"accepted": "Заявка принята", "in_transit": "Груз в пути", "delivered": "Доставлено"}
+    lines = [
+        f"📦 УПРАВЛЕНИЕ ПЕРЕВОЗКОЙ №{request_id}",
+        f"Маршрут: {cargo.origin} → {cargo.destination}",
+        f"Груз: {cargo.cargo} · {cargo.weight_tons:g} т",
+        f"Ставка: {offer.price_rub:,.2f} ₽ · {offer.vat_mode}",
+        f"Транспорт: {offer.vehicle_type}",
+        f"Заказчик: {other.full_name if user.id == chat.carrier_id and other else (user.full_name if user.id == chat.customer_id else '—')}",
+        f"Статус: {names.get(cargo.delivery_status, cargo.delivery_status)}",
+        f"Чат: {'активен' if chat.status == 'active' else 'завершён'}",
+        "",
+        "История статусов:"
+    ]
+    if events:
+        for event, actor in events:
+            stamp = event.created_at.strftime("%d.%m.%Y %H:%M UTC") if event.created_at else "—"
+            lines.append(f"• {names.get(event.status, event.status)} — {actor.full_name or 'Участник'}, {stamp}")
+    else:
+        lines.append("История пока пуста.")
+    rows = []
+    if chat.status == "active":
+        rows.append([InlineKeyboardButton(text="💬 Открыть полноценный чат", callback_data=f"chat:open:{chat.id}")])
+    if cargo.delivery_status == "accepted" and user.id == chat.carrier_id:
+        rows.append([InlineKeyboardButton(text="🚚 Загрузка", callback_data=f"delivery:loading:{request_id}")])
+    elif cargo.delivery_status == "in_transit" and user.id in {chat.customer_id, chat.carrier_id}:
+        rows.append([InlineKeyboardButton(text="✅ Доставлено", callback_data=f"delivery:delivered:{request_id}")])
+    await callback.message.answer("\n".join(lines), reply_markup=InlineKeyboardMarkup(inline_keyboard=rows) if rows else None)
+    await callback.answer()
+
 
 @dp.message(F.text == "🚛 Свободные автомобили")
 async def find_vehicles(message: Message) -> None:

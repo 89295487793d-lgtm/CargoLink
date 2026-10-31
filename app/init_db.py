@@ -2,6 +2,7 @@ import asyncio
 from sqlalchemy import select, text
 from app.database import Base, engine, SessionLocal
 from app import models  # noqa: F401 - registers models on Base.metadata
+from app import domain_models  # noqa: F401 - registers CargoLink 2.0 tables
 from app.models import CargoChat, CargoRequest, CarrierOffer
 
 

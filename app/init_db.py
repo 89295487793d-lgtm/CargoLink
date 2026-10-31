@@ -21,6 +21,7 @@ async def main() -> None:
         await connection.execute(text("ALTER TABLE cargo_requests ADD COLUMN IF NOT EXISTS cargo_category VARCHAR(20)"))
         await connection.execute(text("ALTER TABLE cargo_requests ADD COLUMN IF NOT EXISTS volume_m3 DOUBLE PRECISION"))
         await connection.execute(text("ALTER TABLE cargo_requests ADD COLUMN IF NOT EXISTS vat_mode VARCHAR(20)"))
+        await connection.execute(text("ALTER TABLE cargo_requests ADD COLUMN IF NOT EXISTS payment_method VARCHAR(40)"))
         await connection.execute(text("ALTER TABLE cargo_requests ADD COLUMN IF NOT EXISTS unloading_date VARCHAR(100)"))
         await connection.execute(text("ALTER TABLE cargo_requests ADD COLUMN IF NOT EXISTS adr_class VARCHAR(10)"))
         await connection.execute(text("ALTER TABLE cargo_requests ADD COLUMN IF NOT EXISTS comment VARCHAR(1000)"))

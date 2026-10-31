@@ -186,7 +186,12 @@
       "Металлопродукция": {category:"dry", vehicle:"Бортовой автомобиль", adr:false},
       "Паллетный груз / ТНП": {category:"dry", vehicle:"Фура / еврофура", adr:false},
       "Контейнерный груз": {category:"dry", vehicle:"Контейнеровоз", adr:false},
-      "ADR — другой опасный груз": {adr:true}
+      "ADR — другой опасный груз": {adr:true},
+      "Хим. продукты опасные": {adr:true},
+      "Хим. продукты неопасные": {adr:false},
+      "Нефтепродукты": {category:"liquid", vehicle:"Автоцистерна"},
+      "20\' танк-контейнер": {category:"liquid", vehicle:"Контейнеровоз"},
+      "40\' танк-контейнер": {category:"liquid", vehicle:"Контейнеровоз"}
     };
     const suggestion = defaults[cargo];
     if (!suggestion) return;

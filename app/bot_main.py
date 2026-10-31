@@ -366,9 +366,11 @@ async def cargo_view(callback: CallbackQuery) -> None:
     if viewer and viewer.id == item.customer_id:
         await callback.answer("Это ваша заявка.", show_alert=True)
         return
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text="💰 Предложить ставку", callback_data=f"offer:start:{item.id}")
-    ]])
+    keyboard = None
+    if item.delivery_status in {"pending", "open"}:
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[[
+            InlineKeyboardButton(text="💰 Предложить ставку", callback_data=f"offer:start:{item.id}")
+        ]])
     card_text = (
         f"📄 Заявка №{item.id}\n\nМаршрут: {item.origin} → {item.destination}\n"
         f"Груз: {item.cargo} · {'Налив' if item.cargo_category == 'liquid' else 'Обычный' if item.cargo_category == 'dry' else 'категория не указана'}\n"
@@ -396,6 +398,9 @@ async def offer_start(callback: CallbackQuery, state: FSMContext) -> None:
         carrier = user_result.scalar_one_or_none()
     if item is None or item.status != "open":
         await callback.answer("Заявка уже закрыта.", show_alert=True)
+        return
+    if item.delivery_status not in {"pending", "open"}:
+        await callback.answer("По этой заявке уже ожидается подтверждение перевозчика или перевозка началась.", show_alert=True)
         return
     if carrier is None or not carrier.full_name:
         await callback.answer("Сначала зарегистрируйтесь через /start.", show_alert=True)

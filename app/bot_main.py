@@ -57,8 +57,33 @@ PRICE_MENU = ReplyKeyboardMarkup(
 )
 
 
+MENU_TEXTS = {
+    "🚚 Найти груз",
+    "📦 Разместить заявку",
+    "🚛 Свободные автомобили",
+    "👤 Мой профиль",
+}
+
+
+@dp.message(F.text.in_(MENU_TEXTS))
+async def interrupt_form_with_menu(message: Message, state: FSMContext) -> None:
+    # A menu tap must never be consumed as an answer to the active form field.
+    if await state.get_state():
+        await state.clear()
+        await message.answer("Текущий черновик заявки отменён. Открываю выбранный раздел.", reply_markup=MAIN_MENU)
+    if message.text == "🚚 Найти груз":
+        await find_loads(message)
+    elif message.text == "📦 Разместить заявку":
+        await begin_placement(message, state)
+    elif message.text == "🚛 Свободные автомобили":
+        await find_vehicles(message)
+    elif message.text == "👤 Мой профиль":
+        await show_profile(message)
+
+
 @dp.message(CommandStart())
-async def start(message: Message) -> None:
+async def start(message: Message, state: FSMContext) -> None:
+    await state.clear()
     if not message.from_user:
         return
     async with SessionLocal() as session:

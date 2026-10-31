@@ -84,10 +84,81 @@
     $("form-error").textContent = message;
     $("form-error").classList.remove("hidden");
   }
+
+  function bindAddressAutocomplete(inputId, listId) {
+    const input = $(inputId), list = $(listId);
+    if (!input || !list) return;
+    let timer = null, controller = null, lastQuery = "";
+    const close = () => list.classList.add("hidden");
+    const choose = (value) => { input.value = value; close(); input.dispatchEvent(new Event("change", {bubbles:true})); };
+    input.addEventListener("input", () => {
+      const query = input.value.trim();
+      clearTimeout(timer);
+      if (query.length < 3) { close(); return; }
+      timer = setTimeout(async () => {
+        if (query === lastQuery) return;
+        lastQuery = query;
+        controller?.abort();
+        controller = new AbortController();
+        list.innerHTML = '<div class="suggestion-item">Ищем адреса…</div>';
+        list.classList.remove("hidden");
+        try {
+          const url = "https://photon.komoot.io/api/?q=" + encodeURIComponent(query) + "&lang=ru&limit=6";
+          const response = await fetch(url, {signal:controller.signal});
+          if (!response.ok) throw new Error("Geocoder unavailable");
+          const data = await response.json();
+          const options = (data.features || []).map((feature) => {
+            const p = feature.properties || {};
+            const street = [p.street, p.housenumber].filter(Boolean).join(", ");
+            const locality = p.city || p.town || p.village || p.county || "";
+            return [...new Set([p.name, street, locality, p.state, p.country].filter(Boolean))].join(", ");
+          }).filter(Boolean).filter((value, index, all) => all.indexOf(value) === index).slice(0, 6);
+          if (!options.length) { list.innerHTML = '<div class="suggestion-item">Подсказок нет — можно оставить введённый адрес</div>'; return; }
+          list.innerHTML = options.map((value, index) => '<button type="button" class="suggestion-item" data-index="' + index + '">' + esc(value) + '</button>').join("");
+          list.querySelectorAll("button").forEach((button) => button.addEventListener("click", () => choose(options[Number(button.dataset.index)])));
+        } catch (error) {
+          if (error.name !== "AbortError") { list.innerHTML = '<div class="suggestion-item">Подсказки временно недоступны — введите адрес вручную</div>'; }
+        }
+      }, 350);
+    });
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") close();
+      if (event.key === "Enter" && !list.classList.contains("hidden")) {
+        const first = list.querySelector("button");
+        if (first) { event.preventDefault(); first.click(); }
+      }
+    });
+    document.addEventListener("click", (event) => { if (!list.contains(event.target) && event.target !== input) close(); });
+  }
+
+  function applyCargoSuggestions() {
+    const cargo = $("f-cargo").value;
+    const category = $("f-category"), vehicle = $("f-vehicle");
+    const defaults = {
+      "Дизельное топливо": {category:"liquid", vehicle:"Бензовоз", adr:false},
+      "Бензин": {category:"liquid", vehicle:"Бензовоз", adr:true},
+      "Мазут": {category:"liquid", vehicle:"Автоцистерна", adr:false},
+      "Аммиак": {category:"liquid", vehicle:"Газовоз", adr:true},
+      "ADR — другой опасный груз": {adr:true}
+    };
+    const suggestion = defaults[cargo];
+    if (!suggestion) return;
+    if (suggestion.category) category.value = suggestion.category;
+    if (suggestion.vehicle) vehicle.value = suggestion.vehicle;
+    if (typeof suggestion.adr === "boolean") {
+      $("f-adr-toggle").checked = suggestion.adr;
+      $("adr-wrap").classList.toggle("hidden", !suggestion.adr);
+    }
+  }
   if (isCreateMode) {
     $("create-flow").classList.remove("hidden");
     ["market-hero","market-search","market-results-head","results","detail"].forEach(id => $(id)?.classList.add("hidden"));
-    $("f-cargo").addEventListener("change", () => $("manual-cargo-wrap").classList.toggle("hidden", $("f-cargo").value !== "manual"));
+    bindAddressAutocomplete("f-origin", "f-origin-suggestions");
+    bindAddressAutocomplete("f-destination", "f-destination-suggestions");
+    $("f-cargo").addEventListener("change", () => {
+      $("manual-cargo-wrap").classList.toggle("hidden", $("f-cargo").value !== "manual");
+      applyCargoSuggestions();
+    });
     $("f-vehicle").addEventListener("change", () => $("manual-vehicle-wrap").classList.toggle("hidden", $("f-vehicle").value !== "manual"));
     $("f-adr-toggle").addEventListener("change", () => $("adr-wrap").classList.toggle("hidden", !$("f-adr-toggle").checked));
     $("create-form").addEventListener("submit", (event) => {

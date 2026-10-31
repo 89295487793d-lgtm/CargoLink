@@ -2,22 +2,72 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#f4f7fb"><title>CargoLink — поиск грузов</title>
+<meta name="theme-color" content="#f4f7fb"><title>CargoLink — логистика</title>
 <link rel="stylesheet" href="/style.css"><script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
 <main class="app-shell">
 <header class="topbar"><div class="brand-mark">CL</div><div><p class="eyebrow">LOGISTICS PLATFORM</p><h1>CargoLink</h1></div><span class="live-dot">● Онлайн</span></header>
-<section class="hero"><p class="eyebrow">CARGOLINK MARKETPLACE</p><h2>Найти груз</h2><p>Актуальные заявки на перевозку наливных и сухих грузов</p></section>
-<section class="search-panel">
+<section class="hero" id="market-hero"><p class="eyebrow">CARGOLINK MARKETPLACE</p><h2>Найти груз</h2><p>Актуальные заявки на перевозку наливных и сухих грузов</p></section>
+
+<section id="create-flow" class="hidden">
+  <section class="form-intro"><p class="eyebrow">НОВАЯ ЗАЯВКА</p><h2>Создать заявку</h2><p>Заполните параметры перевозки. Перед публикацией вы сможете проверить карточку.</p></section>
+  <form id="create-form" class="search-panel">
+    <h3>Маршрут</h3>
+    <div class="field-row">
+      <label>Откуда *<input id="f-origin" required minlength="3" maxlength="300" placeholder="Город, адрес загрузки"></label>
+      <label>Куда *<input id="f-destination" required minlength="3" maxlength="300" placeholder="Город, адрес выгрузки"></label>
+    </div>
+    <h3>Информация о грузе</h3>
+    <label>Наименование груза *
+      <select id="f-cargo" required>
+        <option value="">Выберите груз</option><option>Дизельное топливо</option><option>Бензин</option><option>Мазут</option><option>Аммиак</option><option>ADR — другой опасный груз</option><option value="manual">✍️ Ввести вручную</option>
+      </select>
+    </label>
+    <label id="manual-cargo-wrap" class="hidden">Укажите наименование<input id="f-cargo-manual" maxlength="300" placeholder="Наименование груза"></label>
+    <div class="field-row">
+      <label>Категория *<select id="f-category"><option value="liquid">Налив</option><option value="dry">Обычный</option></select></label>
+      <label>Масса, тонн *<input id="f-weight" type="number" min="0.01" max="100000" step="0.01" required placeholder="20"></label>
+    </div>
+    <div class="field-row">
+      <label>Объём, м³<input id="f-volume" type="number" min="0.01" max="1000000" step="0.01" placeholder="Необязательно"></label>
+      <label class="check-label"><span>Опасный груз ADR</span><input id="f-adr-toggle" type="checkbox"></label>
+    </div>
+    <label id="adr-wrap" class="hidden">Класс ADR<select id="f-adr"><option value="">Выберите класс</option><option>1</option><option>2</option><option>3</option><option>4.1</option><option>4.2</option><option>4.3</option><option>5.1</option><option>5.2</option><option>6.1</option><option>6.2</option><option>7</option><option>8</option><option>9</option></select></label>
+
+    <h3>Параметры перевозки</h3>
+    <label>Необходимый транспорт *
+      <select id="f-vehicle" required>
+        <option value="">Выберите транспорт</option>
+        <option>Автоцистерна</option><option>Бензовоз</option><option>Газовоз</option><option>Тентованный автомобиль</option><option>Фура / еврофура</option><option>Рефрижератор</option><option>Изотермический фургон</option><option>Бортовой автомобиль</option><option>Самосвал</option><option>Контейнеровоз</option><option>Автовоз</option><option>Лесовоз</option><option>Трал / низкорамный полуприцеп</option><option>Молоковоз</option><option>Пищевой наливной транспорт</option><option>Цементовоз</option><option>Зерновоз</option><option>Железнодорожный вагон / цистерна</option><option>Морской транспорт</option><option>Авиационный транспорт</option><option value="manual">✍️ Внести вручную</option>
+      </select>
+    </label>
+    <label id="manual-vehicle-wrap" class="hidden">Укажите транспорт<input id="f-vehicle-manual" maxlength="200" placeholder="Тип транспорта"></label>
+    <div class="field-row">
+      <label>Дата загрузки *<input id="f-pickup" type="date" required></label>
+      <label>Дата выгрузки<input id="f-unloading" type="date"></label>
+    </div>
+    <h3>Стоимость</h3>
+    <div class="field-row">
+      <label>Стоимость, ₽<input id="f-price" inputmode="decimal" placeholder="Не указывать"></label>
+      <label>НДС *<select id="f-vat"><option>С НДС</option><option>Без НДС</option></select></label>
+    </div>
+    <h3>Дополнительная информация</h3>
+    <label>Комментарий<textarea id="f-comment" rows="3" maxlength="1000" placeholder="Особые условия, требования к перевозке"></textarea></label>
+    <p id="form-error" class="form-error hidden"></p>
+    <button class="primary" type="submit">Проверить заявку</button>
+  </form>
+  <section id="preview" class="detail hidden"></section>
+</section>
+
+<section class="search-panel" id="market-search">
 <div class="tabs" role="tablist"><button class="tab active" data-category="all">Все</button><button class="tab" data-category="liquid">Наливные</button><button class="tab" data-category="dry">Сухие</button></div>
-<label>Откуда<input id="origin" placeholder="Город отправления"></label>
-<label>Куда<input id="destination" placeholder="Город назначения"></label>
+<label>Откуда<input id="origin" placeholder="Город отправления"></label><label>Куда<input id="destination" placeholder="Город назначения"></label>
 <div class="field-row"><label>Тип груза<input id="cargo" placeholder="Например, дизель"></label><label>Транспорт<input id="vehicle" placeholder="Цистерна"></label></div>
 <button class="primary" id="search">⌕ Найти грузы</button>
 <div class="quick-routes"><span>Быстрые направления</span><button data-route="Москва|Казань">Москва → Казань</button><button data-route="Москва|Санкт-Петербург">Москва → Санкт-Петербург</button><button data-route="Тюмень|Москва">Тюмень → Москва</button></div>
 </section>
-<section class="results-head"><div><p class="eyebrow">MARKETPLACE</p><h3>Результаты поиска</h3></div><span id="count" class="count">Загрузка…</span></section>
+<section class="results-head" id="market-results-head"><div><p class="eyebrow">MARKETPLACE</p><h3>Результаты поиска</h3></div><span id="count" class="count">Загрузка…</span></section>
 <section id="results" class="results"><div class="empty">Загружаем открытые заявки…</div></section>
 <section id="detail" class="detail hidden"></section>
 <footer>CargoLink · Единая платформа грузов и транспорта</footer>

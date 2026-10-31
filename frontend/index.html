@@ -22,7 +22,21 @@
     <h3>Информация о грузе</h3>
     <label>Наименование груза *
       <select id="f-cargo" required>
-        <option value="">Выберите груз</option><option>Дизельное топливо</option><option>Бензин</option><option>Мазут</option><option>Аммиак</option><option>ADR — другой опасный груз</option><option value="manual">✍️ Ввести вручную</option>
+        <option value="">Выберите груз</option>
+        <optgroup label="Нефтепродукты и топливо">
+          <option>Дизельное топливо</option><option>Бензин АИ-92</option><option>Бензин АИ-95</option><option>Бензин АИ-98 / АИ-100</option><option>Авиакеросин</option><option>Керосин</option><option>Мазут</option><option>Битум</option><option>Нефть сырая</option><option>Газовый конденсат</option><option>Смазочные материалы</option>
+        </optgroup>
+        <optgroup label="Газы и химическая продукция">
+          <option>СУГ (пропан-бутан)</option><option>СПГ (сжиженный природный газ)</option><option>Аммиак</option><option>Аммиачная вода</option><option>Метанол</option><option>Этанол</option><option>Растворители</option><option>Кислоты и щёлочи</option><option>Химическое сырьё</option><option>Жидкие удобрения</option>
+        </optgroup>
+        <optgroup label="Пищевые и наливные грузы">
+          <option>Молоко</option><option>Растительное масло</option><option>Патока / меласса</option><option>Пищевые жидкости</option><option>Питьевая вода</option><option>Техническая вода</option>
+        </optgroup>
+        <optgroup label="Сыпучие и генеральные грузы">
+          <option>Зерно</option><option>Сахар</option><option>Удобрения</option><option>Цемент</option><option>Известь</option><option>Песок</option><option>Щебень</option><option>Пиломатериалы</option><option>Металлопродукция</option><option>Паллетный груз / ТНП</option><option>Контейнерный груз</option>
+        </optgroup>
+        <option>ADR — другой опасный груз</option>
+        <option value="manual">✍️ Ввести вручную</option>
       </select>
     </label>
     <label id="manual-cargo-wrap" class="hidden">Укажите наименование<input id="f-cargo-manual" maxlength="300" placeholder="Наименование груза"></label>

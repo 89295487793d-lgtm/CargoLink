@@ -28,6 +28,7 @@ services:
     build: .
     command: ["uvicorn", "app.api_main:app", "--host", "0.0.0.0", "--port", "8000"]
     environment:
+      BOT_TOKEN: ${BOT_TOKEN:-}
       DATABASE_URL: postgresql+asyncpg://cargolink:${POSTGRES_PASSWORD:-cargolink_local_password}@db:5432/cargolink
     depends_on:
       init-db:

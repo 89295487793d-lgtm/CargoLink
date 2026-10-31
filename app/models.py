@@ -27,6 +27,9 @@ class CargoRequest(Base):
     pickup_date: Mapped[str] = mapped_column(String(100))
     price_rub: Mapped[str | None] = mapped_column(String(100), nullable=True)
     status: Mapped[str] = mapped_column(String(30), default="open", index=True)
+    delivery_status: Mapped[str] = mapped_column(String(30), default="accepted", index=True)
+    delivery_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    delivery_updated_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -65,4 +68,13 @@ class CargoChatMessage(Base):
     body: Mapped[str] = mapped_column(String(4000))
     content_type: Mapped[str | None] = mapped_column(String(32), nullable=True)
     file_id: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class CargoStatusEvent(Base):
+    __tablename__ = "cargo_status_events"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    request_id: Mapped[int] = mapped_column(ForeignKey("cargo_requests.id", ondelete="CASCADE"), index=True)
+    actor_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    status: Mapped[str] = mapped_column(String(30))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

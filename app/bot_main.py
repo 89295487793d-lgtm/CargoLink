@@ -745,11 +745,24 @@ async def show_my_offers(message: Message) -> None:
         await message.answer("Вы пока не отправляли предложения.", reply_markup=MAIN_MENU)
         return
     names = {"pending": "Ожидает решения", "accepted": "Принято", "rejected": "Отклонено"}
-    lines = ["📨 Ваши предложения:"]
+    await message.answer("📨 Ваши предложения:", reply_markup=MAIN_MENU)
     for offer, cargo in rows:
-        lines.append(f"\n№{offer.id} · заявка №{cargo.id}\n{cargo.origin} → {cargo.destination}\n"
-                     f"{offer.price_rub:,.2f} ₽ · {offer.vat_mode}\nСтатус: {names.get(offer.status, offer.status)}")
-    await message.answer("\n".join(lines), reply_markup=MAIN_MENU)
+        text_value = (
+            f"Предложение №{offer.id} · заявка №{cargo.id}\n"
+            f"{cargo.origin} → {cargo.destination}\n"
+            f"{offer.price_rub:,.2f} ₽ · {offer.vat_mode}\n"
+            f"Статус: {names.get(offer.status, offer.status)}"
+        )
+        keyboard = None
+        if offer.status == "accepted":
+            async with SessionLocal() as session:
+                chat_result = await session.execute(select(CargoChat).where(CargoChat.offer_id == offer.id))
+                chat = chat_result.scalar_one_or_none()
+            if chat:
+                keyboard = InlineKeyboardMarkup(inline_keyboard=[[
+                    InlineKeyboardButton(text="💬 Открыть чат по заявке", callback_data=f"chat:open:{chat.id}")
+                ]])
+        await message.answer(text_value, reply_markup=keyboard)
 
 
 @dp.message(F.text == "📋 Мои заявки")
@@ -779,7 +792,17 @@ async def show_my_requests(message: Message) -> None:
             lines.append("Предложений пока нет.")
         for offer in offers:
             lines.append(f"Предложение №{offer.id}: {offer.price_rub:,.2f} ₽ ({offer.vat_mode}) — {offer.status}")
-        await message.answer("\n".join(lines), reply_markup=MAIN_MENU)
+        async with SessionLocal() as session:
+            chat_result = await session.execute(
+                select(CargoChat).where(CargoChat.request_id == cargo.id, CargoChat.status == "active")
+            )
+            chat = chat_result.scalar_one_or_none()
+        keyboard = None
+        if chat:
+            keyboard = InlineKeyboardMarkup(inline_keyboard=[[
+                InlineKeyboardButton(text="💬 Открыть чат по заявке", callback_data=f"chat:open:{chat.id}")
+            ]])
+        await message.answer("\n".join(lines), reply_markup=keyboard or MAIN_MENU)
 
 
 @dp.message(F.text == "🚛 Свободные автомобили")

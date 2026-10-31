@@ -5,16 +5,25 @@ from aiogram import Bot, Dispatcher, F
 from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import KeyboardButton, Message, ReplyKeyboardMarkup, ReplyKeyboardRemove, WebAppInfo
+from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, Message, ReplyKeyboardMarkup, ReplyKeyboardRemove, WebAppInfo
 from sqlalchemy import select, text
 
 from app.config import get_settings
 from app.database import SessionLocal, engine
-from app.models import CargoRequest, User
+from app.models import CargoRequest, CarrierOffer, User
 
 settings = get_settings()
 dp = Dispatcher()
 logger = logging.getLogger("cargolink.bot")
+
+
+class OfferForm(StatesGroup):
+    price = State()
+    vat = State()
+    vehicle = State()
+    completion_date = State()
+    comment = State()
+    confirm = State()
 
 
 class PlacementForm(StatesGroup):
@@ -35,6 +44,7 @@ def main_menu() -> ReplyKeyboardMarkup:
     rows.extend([
         [KeyboardButton(text="🚚 Найти груз"), KeyboardButton(text="📦 Разместить заявку")],
         [KeyboardButton(text="🚛 Свободные автомобили"), KeyboardButton(text="👤 Мой профиль")],
+        [KeyboardButton(text="📨 Мои предложения"), KeyboardButton(text="📋 Мои заявки")],
     ])
     return ReplyKeyboardMarkup(keyboard=rows, resize_keyboard=True, input_field_placeholder="Выберите раздел CargoLink")
 
@@ -62,6 +72,8 @@ MENU_TEXTS = {
     "📦 Разместить заявку",
     "🚛 Свободные автомобили",
     "👤 Мой профиль",
+    "📨 Мои предложения",
+    "📋 Мои заявки",
 }
 
 
@@ -79,6 +91,10 @@ async def interrupt_form_with_menu(message: Message, state: FSMContext) -> None:
         await find_vehicles(message)
     elif message.text == "👤 Мой профиль":
         await show_profile(message)
+    elif message.text == "📨 Мои предложения":
+        await show_my_offers(message)
+    elif message.text == "📋 Мои заявки":
+        await show_my_requests(message)
 
 
 @dp.message(CommandStart())
@@ -295,24 +311,356 @@ async def find_loads(message: Message) -> None:
             .limit(10)
         )
         requests = result.scalars().all()
-
     if not requests:
         await message.answer("Пока открытых заявок нет.", reply_markup=MAIN_MENU)
         return
-
-    lines = ["🚚 Открытые заявки CargoLink:", ""]
+    await message.answer("🚚 Открытые заявки CargoLink:", reply_markup=MAIN_MENU)
     for item in requests:
-        lines.append(
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[[
+            InlineKeyboardButton(text="Подробнее и предложить ставку", callback_data=f"cargo:view:{item.id}")
+        ]])
+        await message.answer(
             f"Заявка №{item.id}\n"
             f"Маршрут: {item.origin} → {item.destination}\n"
             f"Груз: {item.cargo}\n"
             f"Масса: {item.weight_tons:g} т\n"
             f"Транспорт: {item.vehicle_type}\n"
             f"Дата загрузки: {item.pickup_date}\n"
-            f"Ставка: {item.price_rub or 'по договорённости'}\n"
+            f"Бюджет заказчика: {item.price_rub or 'не указан'}",
+            reply_markup=keyboard,
         )
-    lines.append("Показаны последние 10 открытых заявок.")
+
+
+
+@dp.callback_query(F.data.startswith("cargo:view:"))
+async def cargo_view(callback: CallbackQuery) -> None:
+    request_id = int(callback.data.rsplit(":", 1)[1])
+    async with SessionLocal() as session:
+        result = await session.execute(select(CargoRequest).where(CargoRequest.id == request_id))
+        item = result.scalar_one_or_none()
+        user_result = await session.execute(select(User).where(User.telegram_id == callback.from_user.id))
+        viewer = user_result.scalar_one_or_none()
+    if item is None or item.status != "open":
+        await callback.answer("Заявка уже недоступна.", show_alert=True)
+        return
+    if viewer and viewer.id == item.customer_id:
+        await callback.answer("Это ваша заявка.", show_alert=True)
+        return
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="💰 Предложить ставку", callback_data=f"offer:start:{item.id}")
+    ]])
+    await callback.message.answer(
+        f"📄 Заявка №{item.id}\n\nМаршрут: {item.origin} → {item.destination}\n"
+        f"Груз: {item.cargo}\nМасса: {item.weight_tons:g} т\n"
+        f"Требуемый транспорт: {item.vehicle_type}\nЗагрузка: {item.pickup_date}\n"
+        f"Бюджет: {item.price_rub or 'не указан'}",
+        reply_markup=keyboard,
+    )
+    await callback.answer()
+
+
+@dp.callback_query(F.data.startswith("offer:start:"))
+async def offer_start(callback: CallbackQuery, state: FSMContext) -> None:
+    request_id = int(callback.data.rsplit(":", 1)[1])
+    async with SessionLocal() as session:
+        result = await session.execute(select(CargoRequest).where(CargoRequest.id == request_id))
+        item = result.scalar_one_or_none()
+        user_result = await session.execute(select(User).where(User.telegram_id == callback.from_user.id))
+        carrier = user_result.scalar_one_or_none()
+    if item is None or item.status != "open":
+        await callback.answer("Заявка уже закрыта.", show_alert=True)
+        return
+    if carrier is None or not carrier.full_name:
+        await callback.answer("Сначала зарегистрируйтесь через /start.", show_alert=True)
+        return
+    if carrier.id == item.customer_id:
+        await callback.answer("Нельзя предложить ставку на собственную заявку.", show_alert=True)
+        return
+    await state.clear()
+    await state.update_data(offer_request_id=request_id)
+    await state.set_state(OfferForm.price)
+    await callback.message.answer(f"💰 Ваша ставка по заявке №{request_id}, ₽. Введите сумму:")
+    await callback.answer()
+
+
+@dp.message(OfferForm.price)
+async def offer_price(message: Message, state: FSMContext) -> None:
+    raw = (message.text or "").replace(" ", "").replace(",", ".")
+    try:
+        value = float(raw)
+        if not 0 < value <= 1_000_000_000:
+            raise ValueError
+    except ValueError:
+        await message.answer("Введите положительную сумму в рублях, например 85000.")
+        return
+    await state.update_data(offer_price=value)
+    await state.set_state(OfferForm.vat)
+    vat_menu = ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text="С НДС"), KeyboardButton(text="Без НДС")]],
+        resize_keyboard=True, one_time_keyboard=True,
+    )
+    await message.answer("Укажите налоговый режим ставки:", reply_markup=vat_menu)
+
+
+@dp.message(OfferForm.vat)
+async def offer_vat(message: Message, state: FSMContext) -> None:
+    value = (message.text or "").strip()
+    if value not in {"С НДС", "Без НДС"}:
+        await message.answer("Выберите «С НДС» или «Без НДС».")
+        return
+    await state.update_data(offer_vat=value)
+    await state.set_state(OfferForm.vehicle)
+    await message.answer("🚛 Укажите транспорт, которым выполните перевозку:", reply_markup=ReplyKeyboardRemove())
+
+
+@dp.message(OfferForm.vehicle)
+async def offer_vehicle(message: Message, state: FSMContext) -> None:
+    value = (message.text or "").strip()
+    if len(value) < 2:
+        await message.answer("Укажите тип транспорта подробнее.")
+        return
+    await state.update_data(offer_vehicle=value[:200])
+    await state.set_state(OfferForm.completion_date)
+    await message.answer("📅 Укажите дату или срок выполнения перевозки:")
+
+
+@dp.message(OfferForm.completion_date)
+async def offer_date(message: Message, state: FSMContext) -> None:
+    value = (message.text or "").strip()
+    if len(value) < 3:
+        await message.answer("Укажите дату или срок выполнения.")
+        return
+    await state.update_data(offer_date=value[:100])
+    await state.set_state(OfferForm.comment)
+    comment_menu = ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text="Без комментария")]],
+        resize_keyboard=True, one_time_keyboard=True,
+    )
+    await message.answer("💬 Добавьте комментарий заказчику или нажмите «Без комментария»:", reply_markup=comment_menu)
+
+
+@dp.message(OfferForm.comment)
+async def offer_comment(message: Message, state: FSMContext) -> None:
+    value = (message.text or "").strip()
+    if not value:
+        await message.answer("Напишите комментарий или нажмите «Без комментария».")
+        return
+    comment = None if value == "Без комментария" else value[:500]
+    await state.update_data(offer_comment=comment)
+    data = await state.get_data()
+    summary = (
+        "Проверьте предложение перед отправкой:\n\n"
+        f"Заявка №{data['offer_request_id']}\n"
+        f"Ставка: {data['offer_price']:,.2f} ₽\n"
+        f"НДС: {data['offer_vat']}\n"
+        f"Транспорт: {data['offer_vehicle']}\n"
+        f"Срок: {data['offer_date']}\n"
+        f"Комментарий: {comment or 'нет'}\n\nОтправить предложение заказчику?"
+    )
+    confirm = ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text="📨 Отправить предложение"), KeyboardButton(text="❌ Отменить")]],
+        resize_keyboard=True, one_time_keyboard=True,
+    )
+    await state.set_state(OfferForm.confirm)
+    await message.answer(summary, reply_markup=confirm)
+
+
+@dp.message(OfferForm.confirm, F.text == "📨 Отправить предложение")
+async def offer_submit(message: Message, state: FSMContext) -> None:
+    if not message.from_user:
+        return
+    data = await state.get_data()
+    async with SessionLocal() as session:
+        carrier_result = await session.execute(select(User).where(User.telegram_id == message.from_user.id))
+        carrier = carrier_result.scalar_one_or_none()
+        request_result = await session.execute(select(CargoRequest).where(CargoRequest.id == data["offer_request_id"]))
+        cargo = request_result.scalar_one_or_none()
+        if not carrier or not cargo or cargo.status != "open" or cargo.customer_id == carrier.id:
+            await state.clear()
+            await message.answer("Заявка больше недоступна. Предложение не отправлено.", reply_markup=MAIN_MENU)
+            return
+        offer = CarrierOffer(
+            request_id=cargo.id, carrier_id=carrier.id, price_rub=data["offer_price"],
+            vat_mode=data["offer_vat"], vehicle_type=data["offer_vehicle"],
+            completion_date=data["offer_date"], comment=data.get("offer_comment"), status="pending",
+        )
+        session.add(offer)
+        await session.commit()
+        offer_id = offer.id
+        customer_result = await session.execute(select(User).where(User.id == cargo.customer_id))
+        customer = customer_result.scalar_one_or_none()
+        customer_chat = customer.telegram_id if customer else None
+        route = f"{cargo.origin} → {cargo.destination}"
+        carrier_name = carrier.full_name or "Перевозчик"
+    await state.clear()
+    await message.answer(
+        f"✅ Предложение №{offer_id} отправлено по заявке №{data['offer_request_id']}.\nСтатус: ожидает решения заказчика.",
+        reply_markup=MAIN_MENU,
+    )
+    if customer_chat:
+        decision = InlineKeyboardMarkup(inline_keyboard=[[
+            InlineKeyboardButton(text="✅ Принять", callback_data=f"offer:accept:{offer_id}"),
+            InlineKeyboardButton(text="❌ Отклонить", callback_data=f"offer:reject:{offer_id}"),
+        ]])
+        try:
+            await message.bot.send_message(
+                customer_chat,
+                f"📨 Новое предложение по заявке №{data['offer_request_id']}!\n\n"
+                f"Перевозчик: {carrier_name}\nМаршрут: {route}\n"
+                f"Ставка: {data['offer_price']:,.2f} ₽ ({data['offer_vat']})\n"
+                f"Транспорт: {data['offer_vehicle']}\nСрок: {data['offer_date']}\n"
+                f"Комментарий: {data.get('offer_comment') or 'нет'}",
+                reply_markup=decision,
+            )
+        except Exception:
+            logger.exception("Could not notify customer about offer %s", offer_id)
+            await message.answer("Предложение сохранено, но уведомление не доставлено. Заказчик увидит его в разделе «Мои заявки».")
+
+
+@dp.message(OfferForm.confirm, F.text == "❌ Отменить")
+async def offer_cancel(message: Message, state: FSMContext) -> None:
+    await state.clear()
+    await message.answer("Отправка предложения отменена.", reply_markup=MAIN_MENU)
+
+
+@dp.callback_query(F.data.startswith("offer:accept:"))
+async def offer_accept(callback: CallbackQuery) -> None:
+    offer_id = int(callback.data.rsplit(":", 1)[1])
+    other_carriers = []
+    async with SessionLocal() as session:
+        result = await session.execute(select(CarrierOffer).where(CarrierOffer.id == offer_id))
+        offer = result.scalar_one_or_none()
+        if not offer:
+            await callback.answer("Предложение не найдено.", show_alert=True)
+            return
+        request_result = await session.execute(select(CargoRequest).where(CargoRequest.id == offer.request_id))
+        cargo = request_result.scalar_one_or_none()
+        customer_result = await session.execute(select(User).where(User.telegram_id == callback.from_user.id))
+        customer = customer_result.scalar_one_or_none()
+        if not customer or not cargo or cargo.customer_id != customer.id:
+            await callback.answer("Только заказчик может принять это предложение.", show_alert=True)
+            return
+        if offer.status != "pending" or cargo.status != "open":
+            await callback.answer("Это предложение уже обработано.", show_alert=True)
+            return
+        offer.status = "accepted"
+        cargo.status = "closed"
+        other_result = await session.execute(
+            select(CarrierOffer).where(CarrierOffer.request_id == cargo.id, CarrierOffer.id != offer.id, CarrierOffer.status == "pending")
+        )
+        others = other_result.scalars().all()
+        for other in others:
+            other.status = "rejected"
+            other_carriers.append((other.id, other.carrier_id))
+        carrier_result = await session.execute(select(User).where(User.id == offer.carrier_id))
+        carrier = carrier_result.scalar_one_or_none()
+        carrier_chat = carrier.telegram_id if carrier else None
+        await session.commit()
+        route = f"{cargo.origin} → {cargo.destination}"
+        cargo_id = cargo.id
+    await callback.message.edit_reply_markup(reply_markup=None)
+    await callback.message.answer(f"✅ Вы приняли предложение №{offer_id}. Заявка №{cargo_id} закрыта для новых ставок.")
+    if carrier_chat:
+        await callback.bot.send_message(carrier_chat, f"🎉 Заказчик принял ваше предложение №{offer_id} по заявке №{cargo_id} ({route}).")
+    for other_id, carrier_id in other_carriers:
+        async with SessionLocal() as session:
+            user_result = await session.execute(select(User).where(User.id == carrier_id))
+            user = user_result.scalar_one_or_none()
+            chat_id = user.telegram_id if user else None
+        if chat_id:
+            try:
+                await callback.bot.send_message(chat_id, f"Предложение №{other_id} по заявке №{cargo_id} закрыто: заказчик выбрал другого перевозчика.")
+            except Exception:
+                logger.exception("Could not notify carrier about offer %s", other_id)
+    await callback.answer("Предложение принято.")
+
+
+@dp.callback_query(F.data.startswith("offer:reject:"))
+async def offer_reject(callback: CallbackQuery) -> None:
+    offer_id = int(callback.data.rsplit(":", 1)[1])
+    async with SessionLocal() as session:
+        result = await session.execute(select(CarrierOffer).where(CarrierOffer.id == offer_id))
+        offer = result.scalar_one_or_none()
+        if not offer:
+            await callback.answer("Предложение не найдено.", show_alert=True)
+            return
+        request_result = await session.execute(select(CargoRequest).where(CargoRequest.id == offer.request_id))
+        cargo = request_result.scalar_one_or_none()
+        customer_result = await session.execute(select(User).where(User.telegram_id == callback.from_user.id))
+        customer = customer_result.scalar_one_or_none()
+        if not customer or not cargo or cargo.customer_id != customer.id:
+            await callback.answer("Только заказчик может отклонить это предложение.", show_alert=True)
+            return
+        if offer.status != "pending":
+            await callback.answer("Предложение уже обработано.", show_alert=True)
+            return
+        offer.status = "rejected"
+        carrier_result = await session.execute(select(User).where(User.id == offer.carrier_id))
+        carrier = carrier_result.scalar_one_or_none()
+        carrier_chat = carrier.telegram_id if carrier else None
+        request_id = cargo.id
+        await session.commit()
+    await callback.message.edit_reply_markup(reply_markup=None)
+    await callback.message.answer(f"Предложение №{offer_id} отклонено.")
+    if carrier_chat:
+        await callback.bot.send_message(carrier_chat, f"Заказчик отклонил предложение №{offer_id} по заявке №{request_id}.")
+    await callback.answer("Предложение отклонено.")
+
+
+@dp.message(F.text == "📨 Мои предложения")
+async def show_my_offers(message: Message) -> None:
+    if not message.from_user:
+        return
+    async with SessionLocal() as session:
+        user_result = await session.execute(select(User).where(User.telegram_id == message.from_user.id))
+        user = user_result.scalar_one_or_none()
+        if not user:
+            await message.answer("Сначала отправьте /start.")
+            return
+        result = await session.execute(
+            select(CarrierOffer, CargoRequest).join(CargoRequest, CarrierOffer.request_id == CargoRequest.id)
+            .where(CarrierOffer.carrier_id == user.id).order_by(CarrierOffer.created_at.desc()).limit(20)
+        )
+        rows = result.all()
+    if not rows:
+        await message.answer("Вы пока не отправляли предложения.", reply_markup=MAIN_MENU)
+        return
+    names = {"pending": "Ожидает решения", "accepted": "Принято", "rejected": "Отклонено"}
+    lines = ["📨 Ваши предложения:"]
+    for offer, cargo in rows:
+        lines.append(f"\n№{offer.id} · заявка №{cargo.id}\n{cargo.origin} → {cargo.destination}\n"
+                     f"{offer.price_rub:,.2f} ₽ · {offer.vat_mode}\nСтатус: {names.get(offer.status, offer.status)}")
     await message.answer("\n".join(lines), reply_markup=MAIN_MENU)
+
+
+@dp.message(F.text == "📋 Мои заявки")
+async def show_my_requests(message: Message) -> None:
+    if not message.from_user:
+        return
+    async with SessionLocal() as session:
+        user_result = await session.execute(select(User).where(User.telegram_id == message.from_user.id))
+        user = user_result.scalar_one_or_none()
+        if not user:
+            await message.answer("Сначала отправьте /start.")
+            return
+        result = await session.execute(
+            select(CargoRequest).where(CargoRequest.customer_id == user.id).order_by(CargoRequest.created_at.desc()).limit(20)
+        )
+        requests = result.scalars().all()
+    if not requests:
+        await message.answer("У вас пока нет заявок.", reply_markup=MAIN_MENU)
+        return
+    names = {"open": "Открыта", "closed": "Закрыта"}
+    for cargo in requests:
+        async with SessionLocal() as session:
+            offer_result = await session.execute(select(CarrierOffer).where(CarrierOffer.request_id == cargo.id).order_by(CarrierOffer.created_at.desc()))
+            offers = offer_result.scalars().all()
+        lines = [f"📋 Заявка №{cargo.id}: {cargo.origin} → {cargo.destination}", f"Статус: {names.get(cargo.status, cargo.status)}"]
+        if not offers:
+            lines.append("Предложений пока нет.")
+        for offer in offers:
+            lines.append(f"Предложение №{offer.id}: {offer.price_rub:,.2f} ₽ ({offer.vat_mode}) — {offer.status}")
+        await message.answer("\n".join(lines), reply_markup=MAIN_MENU)
 
 
 @dp.message(F.text == "🚛 Свободные автомобили")

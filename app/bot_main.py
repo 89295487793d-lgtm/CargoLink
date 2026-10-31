@@ -502,7 +502,7 @@ async def offer_submit(message: Message, state: FSMContext) -> None:
         carrier = carrier_result.scalar_one_or_none()
         request_result = await session.execute(select(CargoRequest).where(CargoRequest.id == data["offer_request_id"]))
         cargo = request_result.scalar_one_or_none()
-        if not carrier or not cargo or cargo.status != "open" or cargo.customer_id == carrier.id:
+        if not carrier or not cargo or cargo.status != "open" or cargo.delivery_status not in {"pending", "open"} or cargo.customer_id == carrier.id:
             await state.clear()
             await message.answer("Заявка больше недоступна. Предложение не отправлено.", reply_markup=MAIN_MENU)
             return
@@ -1031,8 +1031,8 @@ async def show_my_offers(message: Message) -> None:
     if not rows:
         await message.answer("Вы пока не отправляли предложения.", reply_markup=MAIN_MENU)
         return
-    names = {"pending": "Ожидает решения", "accepted": "Принято", "rejected": "Отклонено"}
-    delivery_names = {"accepted": "Заявка принята", "in_transit": "Груз в пути", "delivered": "Доставлено"}
+    names = {"pending": "Ожидает решения заказчика", "awaiting_confirmation": "Ожидает вашего подтверждения", "accepted": "Принято", "rejected": "Отклонено"}
+    delivery_names = {"pending": "Опубликована", "awaiting_confirmation": "Ожидает подтверждения перевозчика", "accepted": "В работе", "in_transit": "Груз в пути", "delivered": "Завершена"}
     await message.answer("📨 Ваши предложения:", reply_markup=MAIN_MENU)
     for offer, cargo in rows:
         text_value = f"Предложение №{offer.id} · заявка №{cargo.id}\n{cargo.origin} → {cargo.destination}\n{offer.price_rub:,.2f} ₽ · {offer.vat_mode}\nСтавка: {names.get(offer.status, offer.status)}"
@@ -1066,8 +1066,8 @@ async def show_my_requests(message: Message) -> None:
     if not requests:
         await message.answer("У вас пока нет заявок.", reply_markup=MAIN_MENU)
         return
-    names = {"open": "Открыта", "closed": "Закрыта"}
-    delivery_names = {"accepted": "Заявка принята", "in_transit": "Груз в пути", "delivered": "Доставлено"}
+    names = {"open": "Открыта", "closed": "Переведена в работу"}
+    delivery_names = {"pending": "Опубликована", "awaiting_confirmation": "Ожидает подтверждения перевозчика", "accepted": "В работе", "in_transit": "Груз в пути", "delivered": "Завершена"}
     for cargo in requests:
         async with SessionLocal() as session:
             offer_result = await session.execute(select(CarrierOffer).where(CarrierOffer.request_id == cargo.id).order_by(CarrierOffer.created_at.desc()))

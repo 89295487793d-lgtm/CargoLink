@@ -47,7 +47,7 @@ def main_menu() -> ReplyKeyboardMarkup:
     if settings.webapp_url.startswith("https://"):
         rows.append([KeyboardButton(text="🚚 Открыть CargoLink", web_app=WebAppInfo(url=settings.webapp_url))])
     rows.extend([
-        [KeyboardButton(text="🚚 Найти груз"), KeyboardButton(text="📦 Разместить заявку")],
+        [KeyboardButton(text="🚚 Найти груз"), KeyboardButton(text="📦 Создать заявку")],
         [KeyboardButton(text="🚛 Свободные автомобили"), KeyboardButton(text="👤 Мой профиль")],
         [KeyboardButton(text="📋 Активные заявки")],
         [KeyboardButton(text="📨 Мои предложения"), KeyboardButton(text="📋 Мои заявки")],
@@ -75,7 +75,7 @@ PRICE_MENU = ReplyKeyboardMarkup(
 
 MENU_TEXTS = {
     "🚚 Найти груз",
-    "📦 Разместить заявку",
+    "📦 Создать заявку",
     "🚛 Свободные автомобили",
     "👤 Мой профиль",
     "📨 Мои предложения",
@@ -92,7 +92,7 @@ async def interrupt_form_with_menu(message: Message, state: FSMContext) -> None:
         await message.answer("Текущий черновик заявки отменён. Открываю выбранный раздел.", reply_markup=MAIN_MENU)
     if message.text == "🚚 Найти груз":
         await find_loads(message)
-    elif message.text == "📦 Разместить заявку":
+    elif message.text == "📦 Создать заявку":
         await begin_placement(message, state)
     elif message.text == "🚛 Свободные автомобили":
         await find_vehicles(message)
@@ -150,7 +150,7 @@ async def save_contact(message: Message) -> None:
     await message.answer("Номер сохранён в профиле и не публикуется в заявках.", reply_markup=MAIN_MENU)
 
 
-@dp.message(F.text == "📦 Разместить заявку")
+@dp.message(F.text == "📦 Создать заявку")
 async def begin_placement(message: Message, state: FSMContext) -> None:
     if not message.from_user:
         return

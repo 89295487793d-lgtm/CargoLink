@@ -226,3 +226,62 @@ input[type="date"]{min-height:46px}
   .date-fields>label+label{padding-left:7px}
   .date-fields input[type="date"]{font-size:11px}
 }
+
+
+/* Refined date pair: two clean, independent date cards */
+.date-fields{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px;
+  padding:0;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  align-items:stretch;
+}
+.date-fields>label{
+  display:flex;
+  flex-direction:column;
+  gap:9px;
+  min-width:0;
+  width:100%;
+  margin:0;
+  padding:12px;
+  border:1px solid #e2e9f3;
+  border-radius:15px;
+  background:#f8faff;
+}
+.date-fields>label+label{
+  padding:12px;
+  border:1px solid #e2e9f3;
+}
+.date-fields .label-title{
+  display:block;
+  min-height:20px;
+  color:#47546a;
+  font-size:12px;
+  font-weight:750;
+  line-height:1.35;
+  white-space:nowrap;
+}
+.date-fields input[type="date"]{
+  display:block;
+  width:100%;
+  min-width:0;
+  max-width:100%;
+  min-height:48px;
+  margin:0;
+  padding:9px 8px;
+  border:1px solid #dce5f1;
+  border-radius:11px;
+  background:#fff;
+  color:#18243a;
+  box-sizing:border-box;
+  font-size:13px;
+}
+@media(max-width:370px){
+  .date-fields{gap:8px}
+  .date-fields>label,.date-fields>label+label{padding:9px}
+  .date-fields .label-title{font-size:11px}
+  .date-fields input[type="date"]{padding:8px 5px;font-size:12px}
+}

@@ -390,3 +390,57 @@ input[type="date"]{min-height:46px}
   margin:0;
   padding:0;
 }
+
+
+/* Compact, balanced date inputs on iPhone */
+.date-fields{
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:10px!important;
+  padding:10px!important;
+}
+.date-fields>label,
+.date-fields>label+label{
+  padding:0!important;
+  gap:7px!important;
+}
+.date-fields .label-title{
+  min-height:18px!important;
+  font-size:12px!important;
+}
+.date-fields input[type="date"]{
+  display:block!important;
+  flex:0 0 44px!important;
+  width:100%!important;
+  height:44px!important;
+  min-height:44px!important;
+  max-height:44px!important;
+  padding:0 7px!important;
+  border:1px solid #dce5f1!important;
+  border-radius:10px!important;
+  background:#fff!important;
+  box-sizing:border-box!important;
+  -webkit-appearance:none!important;
+  appearance:none!important;
+  overflow:hidden!important;
+  font-size:13px!important;
+  line-height:44px!important;
+}
+.date-fields input[type="date"]::-webkit-date-and-time-value{
+  display:inline-block!important;
+  height:42px!important;
+  line-height:42px!important;
+  text-align:left!important;
+  white-space:nowrap!important;
+  margin:0!important;
+  padding:0!important;
+}
+.date-fields input[type="date"]::-webkit-calendar-picker-indicator{
+  width:14px;
+  height:14px;
+  margin:0 1px 0 3px;
+  padding:0;
+}
+@media(max-width:370px){
+  .date-fields{gap:7px!important;padding:8px!important}
+  .date-fields input[type="date"]{font-size:12px!important;padding:0 4px!important}
+}

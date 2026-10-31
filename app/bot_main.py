@@ -336,11 +336,10 @@ async def find_loads(message: Message) -> None:
             f"Заявка №{item.id}\n"
             f"Маршрут: {item.origin} → {item.destination}\n"
             f"Груз: {item.cargo} · {'Налив' if item.cargo_category == 'liquid' else 'Обычный' if item.cargo_category == 'dry' else 'категория не указана'}\n"
-            f"Масса / объём: {item.weight_tons:g} т{f' / {item.volume_m3:g} м³' if item.volume_m3 else ''}{f' · ADR {item.adr_class}' if item.adr_class else ''}\n"
+            f"Масса / объём: {item.weight_tons:g} т" + (f" / {item.volume_m3:g} м³" if item.volume_m3 else "") + (f" · ADR {item.adr_class}" if item.adr_class else "") + "\n"
             f"Транспорт: {item.vehicle_type}\n"
-            f"Даты: {item.pickup_date}{f' — {item.unloading_date}' if item.unloading_date else ''}\n"
-            f"Стоимость: {item.price_rub or 'не указана'}{f' · {item.vat_mode}' if item.vat_mode else ''}"
-            f"{f'\nКомментарий: {item.comment}' if item.comment else ''}",
+            f"Даты: {item.pickup_date}" + (f" — {item.unloading_date}" if item.unloading_date else "") + "\n"
+            f"Стоимость: {item.price_rub or 'не указана'}" + (f" · {item.vat_mode}" if item.vat_mode else "") + (f"\nКомментарий: {item.comment}" if item.comment else ""),
             reply_markup=keyboard,
         )
 
@@ -366,10 +365,10 @@ async def cargo_view(callback: CallbackQuery) -> None:
     await callback.message.answer(
         f"📄 Заявка №{item.id}\n\nМаршрут: {item.origin} → {item.destination}\n"
         f"Груз: {item.cargo} · {'Налив' if item.cargo_category == 'liquid' else 'Обычный' if item.cargo_category == 'dry' else 'категория не указана'}\n"
-        f"Масса / объём: {item.weight_tons:g} т{f' / {item.volume_m3:g} м³' if item.volume_m3 else ''}{f' · ADR {item.adr_class}' if item.adr_class else ''}\n"
-        f"Требуемый транспорт: {item.vehicle_type}\nДаты: {item.pickup_date}{f' — {item.unloading_date}' if item.unloading_date else ''}\n"
-        f"Стоимость: {item.price_rub or 'не указана'}{f' · {item.vat_mode}' if item.vat_mode else ''}"
-        f"{f'\nКомментарий: {item.comment}' if item.comment else ''}",
+        f"Масса / объём: {item.weight_tons:g} т" + (f" / {item.volume_m3:g} м³" if item.volume_m3 else "") + (f" · ADR {item.adr_class}" if item.adr_class else "") + "\n"
+        f"Требуемый транспорт: {item.vehicle_type}\n"
+        f"Даты: {item.pickup_date}" + (f" — {item.unloading_date}" if item.unloading_date else "") + "\n"
+        f"Стоимость: {item.price_rub or 'не указана'}" + (f" · {item.vat_mode}" if item.vat_mode else "") + (f"\nКомментарий: {item.comment}" if item.comment else ""),
         reply_markup=keyboard,
     )
     await callback.answer()

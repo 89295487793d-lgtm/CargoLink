@@ -930,39 +930,35 @@ async def show_my_offers(message: Message) -> None:
     if not message.from_user:
         return
     async with SessionLocal() as session:
-        user_result = await session.execute(select(User).where(User.telegram_id == message.from_user.id))
-        user = user_result.scalar_one_or_none()
+        result = await session.execute(select(User).where(User.telegram_id == message.from_user.id))
+        user = result.scalar_one_or_none()
         if not user:
             await message.answer("Сначала отправьте /start.")
             return
-        result = await session.execute(
-            select(CarrierOffer, CargoRequest).join(CargoRequest, CarrierOffer.request_id == CargoRequest.id)
-            .where(CarrierOffer.carrier_id == user.id).order_by(CarrierOffer.created_at.desc()).limit(20)
-        )
-        rows = result.all()
+        rows_result = await session.execute(select(CarrierOffer, CargoRequest).join(CargoRequest, CarrierOffer.request_id == CargoRequest.id).where(CarrierOffer.carrier_id == user.id).order_by(CarrierOffer.created_at.desc()).limit(20))
+        rows = rows_result.all()
     if not rows:
         await message.answer("Вы пока не отправляли предложения.", reply_markup=MAIN_MENU)
         return
     names = {"pending": "Ожидает решения", "accepted": "Принято", "rejected": "Отклонено"}
+    delivery_names = {"accepted": "Заявка принята", "in_transit": "Груз в пути", "delivered": "Доставлено"}
     await message.answer("📨 Ваши предложения:", reply_markup=MAIN_MENU)
     for offer, cargo in rows:
-        text_value = (
-            f"Предложение №{offer.id} · заявка №{cargo.id}\n"
-            f"{cargo.origin} → {cargo.destination}\n"
-            f"{offer.price_rub:,.2f} ₽ · {offer.vat_mode}\n"
-            f"Статус: {names.get(offer.status, offer.status)}"
-        )
-        keyboard = None
+        text_value = f"Предложение №{offer.id} · заявка №{cargo.id}\n{cargo.origin} → {cargo.destination}\n{offer.price_rub:,.2f} ₽ · {offer.vat_mode}\nСтавка: {names.get(offer.status, offer.status)}"
+        keyboard_rows = []
         if offer.status == "accepted":
+            text_value += f"\nПеревозка: {delivery_names.get(cargo.delivery_status, cargo.delivery_status)}"
             async with SessionLocal() as session:
                 chat_result = await session.execute(select(CargoChat).where(CargoChat.offer_id == offer.id))
                 chat = chat_result.scalar_one_or_none()
             if chat:
-                keyboard = InlineKeyboardMarkup(inline_keyboard=[[
-                    InlineKeyboardButton(text="💬 Открыть чат по заявке", callback_data=f"chat:open:{chat.id}")
-                ]])
+                keyboard_rows.append([InlineKeyboardButton(text="💬 Открыть чат по заявке", callback_data=f"chat:open:{chat.id}")])
+            if cargo.delivery_status == "accepted":
+                keyboard_rows.append([InlineKeyboardButton(text="🚚 Загрузка", callback_data=f"delivery:loading:{cargo.id}")])
+            elif cargo.delivery_status == "in_transit":
+                keyboard_rows.append([InlineKeyboardButton(text="✅ Доставлено", callback_data=f"delivery:delivered:{cargo.id}")])
+        keyboard = InlineKeyboardMarkup(inline_keyboard=keyboard_rows) if keyboard_rows else None
         await message.answer(text_value, reply_markup=keyboard)
-
 
 @dp.message(F.text == "📋 Мои заявки")
 async def show_my_requests(message: Message) -> None:
@@ -974,35 +970,37 @@ async def show_my_requests(message: Message) -> None:
         if not user:
             await message.answer("Сначала отправьте /start.")
             return
-        result = await session.execute(
-            select(CargoRequest).where(CargoRequest.customer_id == user.id).order_by(CargoRequest.created_at.desc()).limit(20)
-        )
+        result = await session.execute(select(CargoRequest).where(CargoRequest.customer_id == user.id).order_by(CargoRequest.created_at.desc()).limit(20))
         requests = result.scalars().all()
     if not requests:
         await message.answer("У вас пока нет заявок.", reply_markup=MAIN_MENU)
         return
     names = {"open": "Открыта", "closed": "Закрыта"}
+    delivery_names = {"accepted": "Заявка принята", "in_transit": "Груз в пути", "delivered": "Доставлено"}
     for cargo in requests:
         async with SessionLocal() as session:
             offer_result = await session.execute(select(CarrierOffer).where(CarrierOffer.request_id == cargo.id).order_by(CarrierOffer.created_at.desc()))
             offers = offer_result.scalars().all()
-        lines = [f"📋 Заявка №{cargo.id}: {cargo.origin} → {cargo.destination}", f"Статус: {names.get(cargo.status, cargo.status)}"]
+            chat_result = await session.execute(select(CargoChat).where(CargoChat.request_id == cargo.id, CargoChat.status == "active"))
+            chat = chat_result.scalar_one_or_none()
+            event_result = await session.execute(select(CargoStatusEvent, User).join(User, User.id == CargoStatusEvent.actor_id).where(CargoStatusEvent.request_id == cargo.id).order_by(CargoStatusEvent.created_at.desc()).limit(1))
+            latest = event_result.first()
+        lines = [f"📋 Заявка №{cargo.id}: {cargo.origin} → {cargo.destination}", f"Статус заявки: {names.get(cargo.status, cargo.status)}", f"Статус перевозки: {delivery_names.get(cargo.delivery_status, cargo.delivery_status)}"]
+        if latest:
+            event, actor = latest
+            stamp = event.created_at.strftime("%d.%m.%Y %H:%M") if event.created_at else "время не указано"
+            lines.append(f"Последнее изменение: {stamp} · {actor.full_name or \"Участник CargoLink\"}")
         if not offers:
             lines.append("Предложений пока нет.")
         for offer in offers:
             lines.append(f"Предложение №{offer.id}: {offer.price_rub:,.2f} ₽ ({offer.vat_mode}) — {offer.status}")
-        async with SessionLocal() as session:
-            chat_result = await session.execute(
-                select(CargoChat).where(CargoChat.request_id == cargo.id, CargoChat.status == "active")
-            )
-            chat = chat_result.scalar_one_or_none()
-        keyboard = None
+        keyboard_rows = []
         if chat:
-            keyboard = InlineKeyboardMarkup(inline_keyboard=[[
-                InlineKeyboardButton(text="💬 Открыть чат по заявке", callback_data=f"chat:open:{chat.id}")
-            ]])
-        await message.answer("\n".join(lines), reply_markup=keyboard or MAIN_MENU)
-
+            keyboard_rows.append([InlineKeyboardButton(text="💬 Открыть чат по заявке", callback_data=f"chat:open:{chat.id}")])
+        if cargo.delivery_status == "in_transit":
+            keyboard_rows.append([InlineKeyboardButton(text="✅ Доставлено", callback_data=f"delivery:delivered:{cargo.id}")])
+        keyboard = InlineKeyboardMarkup(inline_keyboard=keyboard_rows) if keyboard_rows else MAIN_MENU
+        await message.answer("\n".join(lines), reply_markup=keyboard)
 
 @dp.message(F.text == "🚛 Свободные автомобили")
 async def find_vehicles(message: Message) -> None:

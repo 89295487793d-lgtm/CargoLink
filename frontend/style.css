@@ -444,3 +444,40 @@ input[type="date"]{min-height:46px}
   .date-fields{gap:7px!important;padding:8px!important}
   .date-fields input[type="date"]{font-size:12px!important;padding:0 4px!important}
 }
+
+
+/* CargoLink home page */
+.home-screen{display:grid;gap:18px}
+.home-hero{position:relative;display:grid;grid-template-columns:minmax(0,1.2fr) minmax(110px,.8fr);gap:8px;overflow:hidden;padding:25px 21px;border-radius:24px;background:linear-gradient(125deg,#10213f 0%,#173d70 62%,#2468b7 100%);color:#fff;box-shadow:0 14px 30px rgba(16,33,63,.18)}
+.home-hero .eyebrow{color:#a9c7ff;font-size:9px;letter-spacing:1.3px}
+.home-hero h2{margin:12px 0 10px;font-size:clamp(27px,7vw,36px);line-height:1.08;letter-spacing:-1px}
+.home-hero h2 span{color:#8db9ff}
+.home-hero-copy>p:not(.eyebrow){max-width:330px;margin:0;color:#d7e4f6;font-size:13px;line-height:1.55}
+.home-hero-actions{display:grid;gap:9px;margin-top:20px;max-width:270px}
+.home-hero-actions .primary{min-height:48px}
+.home-secondary{min-height:46px;padding:11px 12px;border:1px solid rgba(255,255,255,.34);border-radius:13px;background:rgba(255,255,255,.1);color:#fff;font-size:13px;font-weight:800}
+.home-visual{position:relative;min-height:190px;align-self:stretch}
+.route-line{position:absolute;top:29%;left:42%;width:2px;height:43%;border-left:2px dashed rgba(180,210,255,.8);transform:rotate(38deg)}
+.route-node{position:absolute;display:grid;place-items:center;width:32px;height:32px;border:1px solid rgba(255,255,255,.6);border-radius:50%;background:#fff;color:#1769ff;font-size:18px;font-weight:900;box-shadow:0 5px 16px #061b3b55}
+.route-node-a{top:23%;left:26%}.route-node-b{right:8%;bottom:19%}
+.route-label{position:absolute;color:#d8e7fb;font-size:9px;font-weight:700}.route-label-a{top:14%;left:2%}.route-label-b{right:0;bottom:10%}
+.truck-visual{position:absolute;top:46%;left:45%;font-size:43px;filter:drop-shadow(0 8px 8px #061b3b66);transform:rotate(-8deg)}
+.home-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.home-stat{display:flex;align-items:center;gap:8px;min-width:0;padding:12px 9px;border:1px solid #e5eaf2;border-radius:15px;background:#fff}
+.stat-icon{display:grid;place-items:center;flex:0 0 30px;width:30px;height:30px;border-radius:10px;background:#eef4ff;color:#1769ff;font-size:17px;font-weight:900}
+.home-stat>div{display:grid;gap:3px;min-width:0}.home-stat strong{overflow:hidden;color:#10213f;font-size:14px;text-overflow:ellipsis;white-space:nowrap}.home-stat span:last-child{color:#718096;font-size:9px;line-height:1.25}
+.home-section{display:grid;gap:11px}
+.home-section-heading{display:flex;align-items:end;justify-content:space-between;padding:0 2px}
+.home-section-heading .eyebrow{margin-bottom:4px}
+.home-section-heading h3{margin:0;color:#18243a;font-size:19px;letter-spacing:-.3px}
+.home-actions-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.home-action-card{position:relative;display:flex;flex-direction:column;align-items:flex-start;min-height:158px;padding:15px;border:1px solid #e5eaf2;border-radius:18px;background:#fff;color:#18243a;text-align:left;box-shadow:0 6px 20px rgba(20,39,72,.05)}
+.action-icon{display:grid;place-items:center;width:38px;height:38px;margin-bottom:12px;border-radius:12px;font-size:23px;font-weight:800}
+.blue-icon{background:#edf4ff;color:#1769ff}.orange-icon{background:#fff3e8;color:#e58a2c}
+.home-action-card strong{font-size:14px;line-height:1.25}.home-action-card small{max-width:190px;margin-top:6px;color:#718096;font-size:11px;line-height:1.4}.action-arrow{position:absolute;right:14px;bottom:12px;color:#1769ff;font-size:19px;font-weight:800}
+.home-benefits{padding:17px;border:1px solid #e5eaf2;border-radius:19px;background:#fff}
+.benefit-row{display:flex;gap:12px;padding:11px 0;border-top:1px solid #edf1f6}
+.benefit-row>span{display:grid;place-items:center;flex:0 0 30px;height:30px;border-radius:9px;background:#eef4ff;color:#1769ff;font-size:11px;font-weight:900}
+.benefit-row strong{font-size:13px}.benefit-row p{margin:4px 0 0;color:#718096;font-size:11px;line-height:1.45}
+@media(max-width:390px){.home-hero{grid-template-columns:minmax(0,1fr) 92px;padding:21px 16px}.home-visual{min-height:185px}.home-stats{gap:6px}.home-stat{gap:6px;padding:10px 6px}.stat-icon{flex-basis:26px;width:26px;height:26px}.home-stat strong{font-size:12px}.home-stat span:last-child{font-size:8px}.home-action-card{padding:12px;min-height:154px}}
+@media(max-width:340px){.home-hero{grid-template-columns:1fr}.home-visual{display:none}.home-stats{grid-template-columns:1fr}.home-stat{padding:10px 12px}}

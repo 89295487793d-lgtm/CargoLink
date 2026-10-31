@@ -2,17 +2,334 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#101b33"><title>CargoLink</title>
+<meta name="theme-color" content="#f4f7fb"><title>CargoLink — логистика</title>
 <link rel="stylesheet" href="/style.css"><script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
-<body><main class="app-shell">
-<header class="topbar"><div class="brand-mark">CL</div><div><p class="eyebrow">LOGISTICS PLATFORM</p><h1>CargoLink</h1></div></header>
-<section class="welcome"><p class="eyebrow">ONE PLATFORM. EVERY SHIPMENT.</p><h2>Логистика<br>в одной платформе</h2><p class="muted">Грузы, транспорт и перевозчики — в одном месте.</p></section>
-<section class="primary-actions"><button class="primary" data-action="find">🚚 Найти груз</button><button class="secondary" data-action="create">📦 Разместить заявку</button></section>
-<section class="service-grid">
-<button class="service-card" data-action="liquid"><span>🛢️</span><strong>Наливные грузы</strong><small>Специализированные перевозки</small></button>
-<button class="service-card" data-action="dry"><span>📦</span><strong>Сухие грузы</strong><small>Авто и сборные грузы</small></button>
-<button class="service-card" data-action="vehicles"><span>🚛</span><strong>Свободные авто</strong><small>Доступный транспорт</small></button>
-<button class="service-card" data-action="profile"><span>👤</span><strong>Мой профиль</strong><small>Контакты и активность</small></button>
-</section><footer>Стартовая версия CargoLink · разделы подключаются поэтапно</footer>
-</main><script src="/app.js"></script></body></html>
+<body>
+<main class="app-shell">
+<header class="topbar"><div class="brand-mark">CL</div><div><p class="eyebrow">LOGISTICS PLATFORM</p><h1>CargoLink</h1></div><span class="live-dot">● Онлайн</span></header>
+<section class="hero hidden" id="market-hero"><p class="eyebrow">CARGOLINK MARKETPLACE</p><h2>Найти груз</h2><p>Актуальные заявки на перевозку наливных и сухих грузов</p></section>
+
+<section id="home-screen" class="home-screen">
+  <section class="home-hero">
+    <div class="home-hero-copy">
+      <p class="eyebrow">CARGOLINK · LOGISTICS MARKETPLACE</p>
+      <h2>Грузы и транспорт.<br><span>В одном месте.</span></h2>
+      <p>Находите перевозки, размещайте заявки и управляйте доставкой на единой платформе.</p>
+      <div class="home-hero-actions">
+        <button type="button" class="primary" id="home-find">Найти груз</button>
+        <button type="button" class="home-secondary" id="home-create">＋ Разместить заявку</button>
+      </div>
+    </div>
+    <div class="home-visual" aria-hidden="true">
+      <div class="route-line"></div><div class="route-node route-node-a">⌖</div><div class="route-node route-node-b">⌖</div>
+      <div class="route-label route-label-a">Загрузка</div><div class="route-label route-label-b">Доставка</div>
+      <div class="truck-visual">🚚</div>
+    </div>
+  </section>
+  <section class="home-stats">
+    <div class="home-stat"><span class="stat-icon">▤</span><div><strong id="home-open-count">—</strong><span>Открытых заявок</span></div></div>
+    <div class="home-stat"><span class="stat-icon">↗</span><div><strong>24/7</strong><span>Доступ к платформе</span></div></div>
+    <div class="home-stat"><span class="stat-icon">⇄</span><div><strong>Единый</strong><span>Цикл перевозки</span></div></div>
+  </section>
+  <section class="home-section">
+    <div class="home-section-heading"><div><p class="eyebrow">БЫСТРЫЙ ДОСТУП</p><h3>Что хотите сделать?</h3></div></div>
+    <div class="home-actions-grid">
+      <button type="button" class="home-action-card" id="home-find-card"><span class="action-icon blue-icon">⌕</span><strong>Найти груз</strong><small>Подобрать заявку и предложить ставку</small><span class="action-arrow">→</span></button>
+      <button type="button" class="home-action-card" id="home-create-card"><span class="action-icon orange-icon">＋</span><strong>Разместить заявку</strong><small>Найти перевозчика для вашего груза</small><span class="action-arrow">→</span></button>
+    </div>
+  </section>
+  <section class="home-section home-benefits">
+    <div class="home-section-heading"><div><p class="eyebrow">ПЛАТФОРМА CARGOLINK</p><h3>Весь процесс под контролем</h3></div></div>
+    <div class="benefit-row"><span>01</span><div><strong>Поиск и подбор</strong><p>Открытые заявки на перевозку грузов и удобный поиск по маршруту.</p></div></div>
+    <div class="benefit-row"><span>02</span><div><strong>Ставки и выбор перевозчика</strong><p>Получайте предложения и выбирайте подходящие условия перевозки.</p></div></div>
+    <div class="benefit-row"><span>03</span><div><strong>Контроль доставки</strong><p>От подтверждения заказа до завершения перевозки и истории статусов.</p></div></div>
+  </section>
+</section>
+\n<section id="create-flow" class="hidden">
+  <section class="form-intro"><p class="eyebrow">НОВАЯ ЗАЯВКА</p><h2>Создать заявку</h2><p>Заполните параметры перевозки. Перед публикацией вы сможете проверить карточку.</p></section>
+  <form id="create-form" class="search-panel">
+    <h3>Маршрут</h3>
+    <div class="field-row">
+      <label class="autocomplete-wrap"><span class="label-title">Откуда <span class="required-star">*</span></span><input id="f-origin" autocomplete="off" required minlength="3" maxlength="300" placeholder="Город отправления"><div id="f-origin-suggestions" class="suggestions hidden"></div></label>
+      <label class="autocomplete-wrap"><span class="label-title">Куда <span class="required-star">*</span></span><input id="f-destination" autocomplete="off" required minlength="3" maxlength="300" placeholder="Город прибытия"><div id="f-destination-suggestions" class="suggestions hidden"></div></label>
+    </div>
+    <h3>Информация о грузе</h3>
+    <label><span class="label-title">Наименование груза <span class="required-star">*</span></span>
+      <input id="f-cargo-search" type="search" autocomplete="off" placeholder="Выберите или найдите груз" aria-label="Поиск груза" aria-controls="f-cargo-results">
+      <div id="f-cargo-results" class="cargo-results hidden" role="listbox"></div>
+      <select id="f-cargo" class="visually-hidden" required tabindex="-1" aria-hidden="true">
+<option value="">Выберите груз</option>
+<option>20' контейнер</option>
+<option>20' контейнер HC</option>
+<option>20' реф. контейнер</option>
+<option>20' танк-контейнер</option>
+<option>40' контейнер</option>
+<option>40' контейнер HC</option>
+<option>40' реф. контейнер</option>
+<option>40' реф. контейнер HC</option>
+<option>40' танк-контейнер</option>
+<option>45' контейнер (нов.)</option>
+<option>45' контейнер (стар.)</option>
+<option>45' реф. контейнер</option>
+<option>Авиакеросин</option>
+<option>Автомобили</option>
+<option>Автомобиль(ли)</option>
+<option>Автошины</option>
+<option>Алкогольные напитки</option>
+<option>Аммиак</option>
+<option>Аммиачная вода</option>
+<option>Арматура</option>
+<option>Балки надрессорные</option>
+<option>Безалкогольные напитки</option>
+<option>Бензин АИ-92</option>
+<option>Бензин АИ-95</option>
+<option>Бензин АИ-98 / АИ-100</option>
+<option>Битум</option>
+<option>Боковая рама</option>
+<option>Бумага</option>
+<option>Бытовая техника</option>
+<option>Бытовая химия</option>
+<option>Вагонка</option>
+<option>Газовый конденсат</option>
+<option>Газосиликатные блоки</option>
+<option>Гипс</option>
+<option>Гофрокартон</option>
+<option>Грибы</option>
+<option>Грунт</option>
+<option>Двери</option>
+<option>ДВП</option>
+<option>Домашний переезд</option>
+<option>Доски</option>
+<option>Древесина</option>
+<option>Древесный уголь</option>
+<option>ДСП</option>
+<option>Ж/д запчасти (прочие)</option>
+<option>ЖБИ</option>
+<option>Железобетонные изделия</option>
+<option>Животные</option>
+<option>Жидкие удобрения</option>
+<option>Жмых</option>
+<option>Зерно</option>
+<option>Зерно и семена (в упаковке)</option>
+<option>Зерно и семена (насыпью)</option>
+<option>Игрушки</option>
+<option>Известь</option>
+<option>Изделия из кожи</option>
+<option>Изделия из резины</option>
+<option>Кабель</option>
+<option>Картон</option>
+<option>Керосин</option>
+<option>Кирпич</option>
+<option>Кокс</option>
+<option>Комбикорм</option>
+<option>Компьютеры</option>
+<option>Кондитерские изделия</option>
+<option>Консервы</option>
+<option>Контейнерный груз</option>
+<option>Корма</option>
+<option>Кормовые/пищевые добавки</option>
+<option>Краски и лакокрасочные материалы</option>
+<option>Крупа</option>
+<option>ЛДСП</option>
+<option>Лесоматериалы</option>
+<option>Лом металлов</option>
+<option>Люди</option>
+<option>Мазут</option>
+<option>Макулатура</option>
+<option>Масло растительное</option>
+<option>Мебель</option>
+<option>Медикаменты</option>
+<option>Металлоконструкции</option>
+<option>Металлопрокат</option>
+<option>Метанол</option>
+<option>Молоко</option>
+<option>Молоко сухое</option>
+<option>Молочная продукция</option>
+<option>Мороженое</option>
+<option>Мука</option>
+<option>Мясо и мясопродукты</option>
+<option>Нефтепродукты</option>
+<option>Нефть сырая</option>
+<option>Оборудование</option>
+<option>Оборудование медицинское</option>
+<option>Обувь</option>
+<option>Овощи</option>
+<option>Огнеупорная продукция</option>
+<option>Огнеупорные материалы</option>
+<option>Одежда</option>
+<option>Окна</option>
+<option>Паллетный груз / ТНП</option>
+<option>Парфюмерия и косметика</option>
+<option>Пенопласт</option>
+<option>Песок</option>
+<option>Пиво</option>
+<option>Пиломатериалы</option>
+<option>Пищевые жидкости</option>
+<option>Пластик</option>
+<option>Пластмассы и полимеры</option>
+<option>Плиты OSB / ДСП / МДФ</option>
+<option>Поглощающий аппарат</option>
+<option>Поддоны</option>
+<option>Подсолнечник</option>
+<option>Полипропилен</option>
+<option>Порошковые материалы</option>
+<option>Продукты питания</option>
+<option>Профлист</option>
+<option>Профнастил</option>
+<option>Птица</option>
+<option>Пшеница</option>
+<option>Растворители</option>
+<option>Резина</option>
+<option>Руда</option>
+<option>Рыба (неживая)</option>
+<option>Рыба и морепродукты</option>
+<option>Сантехника</option>
+<option>Сахар</option>
+<option>Сборный груз</option>
+<option>Сельхозпродукция</option>
+<option>Сено</option>
+<option>Сера</option>
+<option>Сжиженный природный газ (СПГ)</option>
+<option>Сжиженный углеводородный газ (СУГ)</option>
+<option>Смазочные материалы</option>
+<option>Соль</option>
+<option>СОНК (КП)</option>
+<option>Стекло</option>
+<option>Стекло и фарфор</option>
+<option>Стеклотара (бутылки и др.)</option>
+<option>Строительные материалы</option>
+<option>Сэндвич-панели</option>
+<option>Табачные изделия</option>
+<option>Тара и упаковка</option>
+<option>Текстиль</option>
+<option>Техническая вода</option>
+<option>Топливо дизельное</option>
+<option>Торф</option>
+<option>Транспортные средства</option>
+<option>Трубы</option>
+<option>Уголь</option>
+<option>Удобрения</option>
+<option>Утеплитель</option>
+<option>Фанера</option>
+<option>Ферросплавы</option>
+<option>Фрукты</option>
+<option>Хим. продукты неопасные</option>
+<option>Хим. продукты опасные</option>
+<option>Химическое сырьё</option>
+<option>Хозтовары</option>
+<option>Холодильное оборудование</option>
+<option>Цветы</option>
+<option>Целлюлоза</option>
+<option>Цемент</option>
+<option>Чипсы</option>
+<option>Шкуры мокросоленые</option>
+<option>Шпалы</option>
+<option>Щебень</option>
+<option>Электроника</option>
+<option>Этанол</option>
+<option>Этиленгликоль</option>
+<option>Ягоды</option>
+<option>ADR — другой опасный груз</option>
+<option>ADR — другой опасный груз</option>
+<option value="manual">✍️ Ввести вручную</option>
+      </select>
+      <p id="f-cargo-selected" class="cargo-selected hidden"></p>
+    </label>
+    <label id="manual-cargo-wrap" class="hidden">Укажите наименование<input id="f-cargo-manual" maxlength="300" placeholder="Наименование груза"></label>
+    <div class="field-row">
+      <label><span class="label-title">Категория <span class="required-star">*</span></span><select id="f-category"><option value="liquid">Налив</option><option value="dry">Обычный</option></select></label>
+      <label><span class="label-title">Масса, тонн <span class="required-star">*</span></span><input id="f-weight" type="number" min="0.01" max="100000" step="0.01" required placeholder="20"></label>
+    </div>
+    <div class="field-row volume-adr-row">
+      <label><span class="label-title">Объём, м³</span><input id="f-volume" type="number" min="0.01" max="1000000" step="0.01" placeholder="Необязательно"></label>
+      <label class="check-label"><span>Опасный груз ADR</span><input id="f-adr-toggle" type="checkbox"></label>
+    </div>
+    <label id="adr-wrap" class="hidden">Класс ADR<select id="f-adr"><option value="">Выберите класс</option><option>1</option><option>2</option><option>3</option><option>4.1</option><option>4.2</option><option>4.3</option><option>5.1</option><option>5.2</option><option>6.1</option><option>6.2</option><option>7</option><option>8</option><option>9</option></select></label>
+
+    <h3>Параметры перевозки</h3>
+    <label><span class="label-title">Необходимый транспорт <span class="required-star">*</span></span>
+      <input id="f-vehicle-search" type="search" autocomplete="off" placeholder="Выберите транспорт" aria-label="Поиск транспорта" aria-controls="f-vehicle-results">
+      <div id="f-vehicle-results" class="cargo-results hidden" role="listbox"></div>
+      <select id="f-vehicle" class="visually-hidden" required tabindex="-1" aria-hidden="true">
+        <option value="">Выберите транспорт</option>
+        <option>Автоцистерна</option>
+        <option>Бензовоз</option>
+        <option>Газовоз</option>
+        <option>Химическая автоцистерна</option>
+        <option>Пищевая цистерна из нержавеющей стали</option>
+        <option>Молоковоз</option>
+        <option>Водовоз</option>
+        <option>Битумовоз</option>
+        <option>Топливозаправщик</option>
+        <option>Тентованный автомобиль</option>
+        <option>Фура / еврофура</option>
+        <option>Мега-трейлер</option>
+        <option>Jumbo-прицеп</option>
+        <option>Рефрижератор</option>
+        <option>Изотермический фургон</option>
+        <option>Фургон</option>
+        <option>Бортовой автомобиль</option>
+        <option>Манипулятор (КМУ)</option>
+        <option>Самосвал</option>
+        <option>Зерновоз</option>
+        <option>Муковоз</option>
+        <option>Цементовоз</option>
+        <option>Бетоносмеситель</option>
+        <option>Контейнеровоз</option>
+        <option>Трал / низкорамный полуприцеп</option>
+        <option>Автовоз</option>
+        <option>Лесовоз</option>
+        <option>Сортиментовоз</option>
+        <option>Скотовоз</option>
+        <option>Мусоровоз</option>
+        <option>Эвакуатор</option>
+        <option>Железнодорожный крытый вагон</option>
+        <option>Железнодорожная платформа</option>
+        <option>Полувагон</option>
+        <option>Вагон-цистерна</option>
+        <option>Изотермический вагон</option>
+        <option>Рефрижераторный вагон</option>
+        <option>Хоппер</option>
+        <option>Танк-контейнер (20 футов)</option>
+        <option>Танк-контейнер (40 футов)</option>
+        <option>Морское судно / контейнеровоз</option>
+        <option>Морское судно для наливных грузов</option>
+        <option>Паром / Ro-Ro</option>
+        <option>Авиационный грузовой транспорт</option>
+        <option value="manual">✍️ Внести вручную</option>
+      </select>
+
+    </label>
+    <label id="manual-vehicle-wrap" class="hidden">Укажите транспорт<input id="f-vehicle-manual" maxlength="200" placeholder="Тип транспорта"></label>
+    <div class="date-fields">
+      <label><span class="label-title">Дата загрузки <span class="required-star">*</span></span><input id="f-pickup" type="date" required></label>
+      <label><span class="label-title">Дата выгрузки</span><input id="f-unloading" type="date"></label>
+    </div>
+    <h3>Стоимость</h3>
+    <div class="field-row">
+      <label>Стоимость, ₽<input id="f-price" inputmode="decimal" placeholder="Не указывать"></label>
+      <label><span class="label-title">Форма оплаты <span class="required-star">*</span></span><select id="f-price-terms"><option value="С НДС, безнал">С НДС, безнал</option><option value="Без НДС, безнал">Без НДС, безнал</option><option value="Наличными">Наличными</option><option value="Запрос ставки">Запрос ставки</option></select></label>
+    </div>
+    <h3>Дополнительная информация</h3>
+    <label>Комментарий<textarea id="f-comment" rows="3" maxlength="1000" placeholder="Особые условия, требования к перевозке"></textarea></label>
+    <p id="form-error" class="form-error hidden"></p>
+    <button class="primary" type="submit">Проверить заявку</button>
+  </form>
+  <section id="preview" class="detail hidden"></section>
+</section>
+
+<section class="search-panel hidden" id="market-search">
+<div class="tabs" role="tablist"><button class="tab active" data-category="all">Все</button><button class="tab" data-category="liquid">Наливные</button><button class="tab" data-category="dry">Сухие</button></div>
+<label>Откуда<input id="origin" placeholder="Город отправления"></label><label>Куда<input id="destination" placeholder="Город назначения"></label>
+<div class="field-row"><label>Тип груза<input id="cargo" placeholder="Например, дизель"></label><label>Транспорт<input id="vehicle" placeholder="Цистерна"></label></div>
+<button class="primary" id="search">⌕ Найти грузы</button>
+<div class="quick-routes"><span>Быстрые направления</span><button data-route="Москва|Казань">Москва → Казань</button><button data-route="Москва|Санкт-Петербург">Москва → Санкт-Петербург</button><button data-route="Тюмень|Москва">Тюмень → Москва</button></div>
+</section>
+<section class="results-head hidden" id="market-results-head"><div><p class="eyebrow">MARKETPLACE</p><h3>Результаты поиска</h3></div><span id="count" class="count">Загрузка…</span></section>
+<section id="results" class="results hidden"><div class="empty">Загружаем открытые заявки…</div></section>
+<section id="detail" class="detail hidden"></section>
+<footer>CargoLink · Единая платформа грузов и транспорта</footer>
+</main>
+<script src="/app.js"></script>
+</body></html>

@@ -1,0 +1,16 @@
+{
+  "name": "CargoLink",
+  "image": "mcr.microsoft.com/devcontainers/universal:2",
+  "workspaceFolder": "/workspaces/CargoLink",
+  "forwardPorts": [8000],
+  "portsAttributes": {
+    "8000": {
+      "label": "CargoLink API",
+      "onAutoForward": "notify"
+    }
+  },
+  "postCreateCommand": "bash .devcontainer/start.sh",
+  "remoteEnv": {
+    "PYTHONUNBUFFERED": "1"
+  }
+}

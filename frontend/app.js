@@ -152,7 +152,7 @@
       "Бензин АИ-92": {category:"liquid", vehicle:"Бензовоз", adr:true},
       "Бензин АИ-95": {category:"liquid", vehicle:"Бензовоз", adr:true},
       "Бензин АИ-98 / АИ-100": {category:"liquid", vehicle:"Бензовоз", adr:true},
-      "Авиакеросин": {category:"liquid", vehicle:"Топливозаправщик", adr:true},
+      "Авиакеросин": {category:"liquid", vehicle:"Автоцистерна", adr:true},
       "Керосин": {category:"liquid", vehicle:"Автоцистерна", adr:true},
       "Мазут": {category:"liquid", vehicle:"Автоцистерна", adr:false},
       "Битум": {category:"liquid", vehicle:"Автоцистерна", adr:false},

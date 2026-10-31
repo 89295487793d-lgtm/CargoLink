@@ -10,11 +10,15 @@ from sqlalchemy import select, text
 
 from app.config import get_settings
 from app.database import SessionLocal, engine
-from app.models import CargoRequest, CarrierOffer, User
+from app.models import CargoChat, CargoChatMessage, CargoRequest, CarrierOffer, User
 
 settings = get_settings()
 dp = Dispatcher()
 logger = logging.getLogger("cargolink.bot")
+
+
+class ChatForm(StatesGroup):
+    active = State()
 
 
 class OfferForm(StatesGroup):
@@ -555,13 +559,33 @@ async def offer_accept(callback: CallbackQuery) -> None:
         carrier_result = await session.execute(select(User).where(User.id == offer.carrier_id))
         carrier = carrier_result.scalar_one_or_none()
         carrier_chat = carrier.telegram_id if carrier else None
+        chat_result = await session.execute(select(CargoChat).where(CargoChat.offer_id == offer.id))
+        chat = chat_result.scalar_one_or_none()
+        if chat is None:
+            chat = CargoChat(request_id=cargo.id, offer_id=offer.id, customer_id=customer.id, carrier_id=offer.carrier_id, status="active")
+            session.add(chat)
+            await session.flush()
+        chat_id = chat.id
         await session.commit()
         route = f"{cargo.origin} → {cargo.destination}"
         cargo_id = cargo.id
     await callback.message.edit_reply_markup(reply_markup=None)
     await callback.message.answer(f"✅ Вы приняли предложение №{offer_id}. Заявка №{cargo_id} закрыта для новых ставок.")
+    chat_keyboard = InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="💬 Открыть переписку", callback_data=f"chat:open:{chat_id}")
+    ]])
+    await callback.bot.send_message(
+        callback.from_user.id,
+        f"💬 По заявке №{cargo_id} создана переписка с перевозчиком. Маршрут: {route}.",
+        reply_markup=chat_keyboard,
+    )
     if carrier_chat:
-        await callback.bot.send_message(carrier_chat, f"🎉 Заказчик принял ваше предложение №{offer_id} по заявке №{cargo_id} ({route}).")
+        await callback.bot.send_message(
+            carrier_chat,
+            f"🎉 Заказчик принял ваше предложение №{offer_id} по заявке №{cargo_id} ({route}).\n"
+            "Теперь можно обсудить детали перевозки в CargoLink.",
+            reply_markup=chat_keyboard,
+        )
     for other_id, carrier_id in other_carriers:
         async with SessionLocal() as session:
             user_result = await session.execute(select(User).where(User.id == carrier_id))
@@ -573,6 +597,101 @@ async def offer_accept(callback: CallbackQuery) -> None:
             except Exception:
                 logger.exception("Could not notify carrier about offer %s", other_id)
     await callback.answer("Предложение принято.")
+
+
+
+@dp.callback_query(F.data.startswith("chat:open:"))
+async def open_cargo_chat(callback: CallbackQuery, state: FSMContext) -> None:
+    chat_id = int(callback.data.rsplit(":", 1)[1])
+    async with SessionLocal() as session:
+        result = await session.execute(select(CargoChat).where(CargoChat.id == chat_id, CargoChat.status == "active"))
+        chat = result.scalar_one_or_none()
+        user_result = await session.execute(select(User).where(User.telegram_id == callback.from_user.id))
+        user = user_result.scalar_one_or_none()
+        if not chat or not user or user.id not in {chat.customer_id, chat.carrier_id}:
+            await callback.answer("Переписка недоступна.", show_alert=True)
+            return
+        other_id = chat.carrier_id if user.id == chat.customer_id else chat.customer_id
+        other_result = await session.execute(select(User).where(User.id == other_id))
+        other = other_result.scalar_one_or_none()
+        history_result = await session.execute(
+            select(CargoChatMessage).where(CargoChatMessage.chat_id == chat.id)
+            .order_by(CargoChatMessage.created_at.asc()).limit(30)
+        )
+        history = history_result.scalars().all()
+        request_result = await session.execute(select(CargoRequest).where(CargoRequest.id == chat.request_id))
+        cargo = request_result.scalar_one_or_none()
+    await state.clear()
+    await state.set_state(ChatForm.active)
+    await state.update_data(chat_id=chat_id)
+    chat_menu = ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text="🔚 Завершить переписку")]],
+        resize_keyboard=True,
+    )
+    await callback.message.answer(
+        f"💬 Переписка по заявке №{chat.request_id}\n"
+        f"Маршрут: {cargo.origin if cargo else ''} → {cargo.destination if cargo else ''}\n"
+        f"Собеседник: {other.full_name if other else 'участник CargoLink'}\n\n"
+        "Отправляйте сообщения обычным текстом. Они будут доставляться второму участнику.",
+        reply_markup=chat_menu,
+    )
+    if history:
+        lines = ["Последние сообщения:"]
+        for item in history:
+            sender = "Вы" if item.sender_id == user.id else (other.full_name if other else "Собеседник")
+            lines.append(f"{sender}: {item.body}")
+        await callback.message.answer("\n".join(lines))
+    else:
+        await callback.message.answer("Переписка пока пустая. Напишите первое сообщение.")
+    await callback.answer()
+
+
+@dp.message(ChatForm.active, F.text == "🔚 Завершить переписку")
+async def close_chat_view(message: Message, state: FSMContext) -> None:
+    await state.clear()
+    await message.answer("Вы вышли из режима переписки. История сохранена.", reply_markup=MAIN_MENU)
+
+
+@dp.message(ChatForm.active, F.text)
+async def relay_chat_message(message: Message, state: FSMContext) -> None:
+    if not message.from_user or not message.text:
+        return
+    data = await state.get_data()
+    chat_id = data.get("chat_id")
+    async with SessionLocal() as session:
+        chat_result = await session.execute(select(CargoChat).where(CargoChat.id == chat_id, CargoChat.status == "active"))
+        chat = chat_result.scalar_one_or_none()
+        sender_result = await session.execute(select(User).where(User.telegram_id == message.from_user.id))
+        sender = sender_result.scalar_one_or_none()
+        if not chat or not sender or sender.id not in {chat.customer_id, chat.carrier_id}:
+            await state.clear()
+            await message.answer("Переписка недоступна. Откройте её заново из уведомления.", reply_markup=MAIN_MENU)
+            return
+        recipient_id = chat.carrier_id if sender.id == chat.customer_id else chat.customer_id
+        recipient_result = await session.execute(select(User).where(User.id == recipient_id))
+        recipient = recipient_result.scalar_one_or_none()
+        if not recipient:
+            await message.answer("Не удалось найти второго участника переписки.")
+            return
+        body = message.text.strip()
+        if not body or len(body) > 4000:
+            await message.answer("Сообщение должно содержать от 1 до 4000 символов.")
+            return
+        record = CargoChatMessage(chat_id=chat.id, sender_id=sender.id, body=body)
+        session.add(record)
+        await session.commit()
+        recipient_chat_id = recipient.telegram_id
+        sender_name = sender.full_name or "Участник CargoLink"
+        request_id = chat.request_id
+    try:
+        await message.bot.send_message(
+            recipient_chat_id,
+            f"💬 Сообщение по заявке №{request_id}\n{sender_name}:\n{body}",
+        )
+        await message.answer("✓ Доставлено.")
+    except Exception:
+        logger.exception("Could not relay chat message for chat %s", chat_id)
+        await message.answer("Сообщение сохранено, но Telegram не подтвердил доставку. Попробуйте позже.")
 
 
 @dp.callback_query(F.data.startswith("offer:reject:"))

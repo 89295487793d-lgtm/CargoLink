@@ -553,7 +553,6 @@ async def offer_cancel(message: Message, state: FSMContext) -> None:
 @dp.callback_query(F.data.startswith("offer:accept:"))
 async def offer_accept(callback: CallbackQuery) -> None:
     offer_id = int(callback.data.rsplit(":", 1)[1])
-    other_carriers = []
     async with SessionLocal() as session:
         result = await session.execute(select(CarrierOffer).where(CarrierOffer.id == offer_id))
         offer = result.scalar_one_or_none()
@@ -565,24 +564,16 @@ async def offer_accept(callback: CallbackQuery) -> None:
         customer_result = await session.execute(select(User).where(User.telegram_id == callback.from_user.id))
         customer = customer_result.scalar_one_or_none()
         if not customer or not cargo or cargo.customer_id != customer.id:
-            await callback.answer("Только заказчик может принять это предложение.", show_alert=True)
+            await callback.answer("Только заказчик может выбрать перевозчика.", show_alert=True)
             return
-        if offer.status != "pending" or cargo.status != "open":
-            await callback.answer("Это предложение уже обработано.", show_alert=True)
+        if offer.status != "pending" or cargo.status != "open" or cargo.delivery_status not in {"pending", "open"}:
+            await callback.answer("Заявка или предложение уже обрабатываются.", show_alert=True)
             return
-        offer.status = "accepted"
-        cargo.status = "closed"
-        cargo.delivery_status = "accepted"
+        offer.status = "awaiting_confirmation"
+        cargo.delivery_status = "awaiting_confirmation"
         cargo.delivery_updated_at = datetime.now(timezone.utc)
         cargo.delivery_updated_by = customer.id
-        session.add(CargoStatusEvent(request_id=cargo.id, actor_id=customer.id, status="accepted"))
-        other_result = await session.execute(
-            select(CarrierOffer).where(CarrierOffer.request_id == cargo.id, CarrierOffer.id != offer.id, CarrierOffer.status == "pending")
-        )
-        others = other_result.scalars().all()
-        for other in others:
-            other.status = "rejected"
-            other_carriers.append((other.id, other.carrier_id))
+        session.add(CargoStatusEvent(request_id=cargo.id, actor_id=customer.id, status="awaiting_confirmation"))
         carrier_result = await session.execute(select(User).where(User.id == offer.carrier_id))
         carrier = carrier_result.scalar_one_or_none()
         carrier_chat = carrier.telegram_id if carrier else None
@@ -593,38 +584,113 @@ async def offer_accept(callback: CallbackQuery) -> None:
             session.add(chat)
             await session.flush()
         chat_id = chat.id
-        await session.commit()
-        route = f"{cargo.origin} → {cargo.destination}"
         cargo_id = cargo.id
+        route = f"{cargo.origin} → {cargo.destination}"
+        await session.commit()
     await callback.message.edit_reply_markup(reply_markup=None)
-    await callback.message.answer(f"✅ Вы приняли предложение №{offer_id}. Заявка №{cargo_id} закрыта для новых ставок.")
-    chat_keyboard = InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text="💬 Открыть переписку", callback_data=f"chat:open:{chat_id}")
-    ]])
-    await callback.bot.send_message(
-        callback.from_user.id,
-        f"💬 По заявке №{cargo_id} создана переписка с перевозчиком. Маршрут: {route}.",
-        reply_markup=chat_keyboard,
+    await callback.message.answer(
+        f"⏳ Вы выбрали перевозчика по заявке №{cargo_id}. Ожидаем подтверждения от перевозчика. "
+        "До подтверждения заявка остаётся в общем списке."
     )
     if carrier_chat:
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[[
+            InlineKeyboardButton(text="✅ Подтвердить заказ", callback_data=f"offer:confirm:{offer_id}"),
+            InlineKeyboardButton(text="❌ Отказаться", callback_data=f"offer:decline:{offer_id}"),
+        ]])
         await callback.bot.send_message(
             carrier_chat,
-            f"🎉 Заказчик принял ваше предложение №{offer_id} по заявке №{cargo_id} ({route}).\n"
-            "Теперь можно обсудить детали перевозки в CargoLink.",
-            reply_markup=chat_keyboard,
+            f"📦 Заказчик выбрал ваше предложение №{offer_id} по заявке №{cargo_id}.\n"
+            f"Маршрут: {route}\nПодтвердите, что принимаете перевозку.",
+            reply_markup=keyboard,
         )
-    for other_id, carrier_id in other_carriers:
+    await callback.answer("Ожидаем подтверждения перевозчика.")
+
+
+@dp.callback_query(F.data.startswith("offer:confirm:"))
+async def offer_confirm(callback: CallbackQuery) -> None:
+    offer_id = int(callback.data.rsplit(":", 1)[1])
+    other_carriers = []
+    async with SessionLocal() as session:
+        result = await session.execute(select(CarrierOffer).where(CarrierOffer.id == offer_id))
+        offer = result.scalar_one_or_none()
+        request_result = await session.execute(select(CargoRequest).where(CargoRequest.id == offer.request_id)) if offer else None
+        cargo = request_result.scalar_one_or_none() if request_result else None
+        user_result = await session.execute(select(User).where(User.telegram_id == callback.from_user.id))
+        carrier = user_result.scalar_one_or_none()
+        if not offer or not cargo or not carrier or offer.carrier_id != carrier.id:
+            await callback.answer("Подтвердить заказ может только выбранный перевозчик.", show_alert=True)
+            return
+        if offer.status != "awaiting_confirmation" or cargo.delivery_status != "awaiting_confirmation":
+            await callback.answer("Заказ уже обработан или больше не ожидает подтверждения.", show_alert=True)
+            return
+        offer.status = "accepted"
+        cargo.status = "closed"
+        cargo.delivery_status = "accepted"
+        cargo.delivery_updated_at = datetime.now(timezone.utc)
+        cargo.delivery_updated_by = carrier.id
+        session.add(CargoStatusEvent(request_id=cargo.id, actor_id=carrier.id, status="accepted"))
+        others_result = await session.execute(
+            select(CarrierOffer).where(CarrierOffer.request_id == cargo.id, CarrierOffer.id != offer.id, CarrierOffer.status == "pending")
+        )
+        for other in others_result.scalars().all():
+            other.status = "rejected"
+            other_carriers.append(other.carrier_id)
+        customer_result = await session.execute(select(User).where(User.id == cargo.customer_id))
+        customer = customer_result.scalar_one_or_none()
+        customer_chat = customer.telegram_id if customer else None
+        cargo_id = cargo.id
+        route = f"{cargo.origin} → {cargo.destination}"
+        await session.commit()
+    await callback.message.edit_reply_markup(reply_markup=None)
+    await callback.message.answer(f"✅ Заказ по заявке №{cargo_id} подтверждён. Заявка закрыта для новых ставок.")
+    if customer_chat:
+        await callback.bot.send_message(customer_chat, f"✅ Перевозчик подтвердил заказ по заявке №{cargo_id} ({route}). Заявка перенесена в раздел «В работе».")
+    for carrier_id in other_carriers:
         async with SessionLocal() as session:
             user_result = await session.execute(select(User).where(User.id == carrier_id))
             user = user_result.scalar_one_or_none()
-            chat_id = user.telegram_id if user else None
-        if chat_id:
+            telegram_id = user.telegram_id if user else None
+        if telegram_id:
             try:
-                await callback.bot.send_message(chat_id, f"Предложение №{other_id} по заявке №{cargo_id} закрыто: заказчик выбрал другого перевозчика.")
+                await callback.bot.send_message(telegram_id, f"Заявка №{cargo_id}: заказ подтверждён другим перевозчиком. Ваше предложение закрыто.")
             except Exception:
-                logger.exception("Could not notify carrier about offer %s", other_id)
-    await callback.answer("Предложение принято.")
+                logger.exception("Could not notify carrier about closed offer for request %s", cargo_id)
+    await callback.answer("Заказ подтверждён.")
 
+
+@dp.callback_query(F.data.startswith("offer:decline:"))
+async def offer_decline(callback: CallbackQuery) -> None:
+    offer_id = int(callback.data.rsplit(":", 1)[1])
+    customer_chat = None
+    async with SessionLocal() as session:
+        result = await session.execute(select(CarrierOffer).where(CarrierOffer.id == offer_id))
+        offer = result.scalar_one_or_none()
+        request_result = await session.execute(select(CargoRequest).where(CargoRequest.id == offer.request_id)) if offer else None
+        cargo = request_result.scalar_one_or_none() if request_result else None
+        user_result = await session.execute(select(User).where(User.telegram_id == callback.from_user.id))
+        carrier = user_result.scalar_one_or_none()
+        if not offer or not cargo or not carrier or offer.carrier_id != carrier.id:
+            await callback.answer("Отказаться может только выбранный перевозчик.", show_alert=True)
+            return
+        if offer.status != "awaiting_confirmation" or cargo.delivery_status != "awaiting_confirmation":
+            await callback.answer("Заказ уже обработан.", show_alert=True)
+            return
+        offer.status = "rejected"
+        cargo.status = "open"
+        cargo.delivery_status = "pending"
+        cargo.delivery_updated_at = datetime.now(timezone.utc)
+        cargo.delivery_updated_by = carrier.id
+        session.add(CargoStatusEvent(request_id=cargo.id, actor_id=carrier.id, status="pending"))
+        customer_result = await session.execute(select(User).where(User.id == cargo.customer_id))
+        customer = customer_result.scalar_one_or_none()
+        customer_chat = customer.telegram_id if customer else None
+        cargo_id = cargo.id
+        await session.commit()
+    await callback.message.edit_reply_markup(reply_markup=None)
+    await callback.message.answer(f"Вы отказались от заказа по заявке №{cargo_id}.")
+    if customer_chat:
+        await callback.bot.send_message(customer_chat, f"Перевозчик отказался от заказа по заявке №{cargo_id}. Заявка снова открыта для предложений.")
+    await callback.answer("Отказ зарегистрирован.")
 
 
 @dp.callback_query(F.data.startswith("chat:open:"))

@@ -36,6 +36,8 @@ def request_payload(row: CargoRequest) -> dict:
         "pickup_date": row.pickup_date,
         "price_rub": row.price_rub,
         "vat_mode": row.vat_mode,
+        "payment_method": row.payment_method,
+        "price_terms": ("С НДС, безнал" if row.vat_mode == "С НДС" else "Без НДС, безнал" if row.vat_mode == "Без НДС" and row.payment_method == "Безналичный расчёт" else "Наличными" if row.payment_method == "Наличные" else "Запрос ставки" if row.payment_method == "Запрос ставки" else None),
         "volume_m3": row.volume_m3,
         "unloading_date": row.unloading_date,
         "adr_class": row.adr_class,
@@ -57,8 +59,8 @@ class CreateRequest(BaseModel):
     pickup_date: str = Field(min_length=4, max_length=100)
     unloading_date: str | None = Field(default=None, max_length=100)
     price_rub: str | None = Field(default=None, max_length=100)
-    vat_mode: str = Field(pattern="^(С НДС|Без НДС)$")
-    payment_method: str = Field(default="Безналичный расчёт", pattern="^(Безналичный расчёт|Наличные|Запрос)$")
+    vat_mode: str | None = Field(default=None, pattern="^(С НДС|Без НДС)$")
+    payment_method: str = Field(default="Безналичный расчёт", pattern="^(Безналичный расчёт|Наличные|Запрос ставки)$")
     comment: str | None = Field(default=None, max_length=1000)
 
 

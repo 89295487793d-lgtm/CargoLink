@@ -1,5 +1,5 @@
 import asyncio
-from sqlalchemy import select
+from sqlalchemy import select, text
 from app.database import Base, engine, SessionLocal
 from app import models  # noqa: F401 - registers models on Base.metadata
 from app.models import CargoChat, CargoRequest, CarrierOffer
@@ -8,6 +8,13 @@ from app.models import CargoChat, CargoRequest, CarrierOffer
 async def main() -> None:
     async with engine.begin() as connection:
         await connection.run_sync(Base.metadata.create_all)
+        # Additive migration for attachments; safe to run on every startup.
+        await connection.execute(text(
+            "ALTER TABLE cargo_chat_messages ADD COLUMN IF NOT EXISTS content_type VARCHAR(32)"
+        ))
+        await connection.execute(text(
+            "ALTER TABLE cargo_chat_messages ADD COLUMN IF NOT EXISTS file_id VARCHAR(500)"
+        ))
     # Backfill private chats for accepted offers created before the chat feature.
     async with SessionLocal() as session:
         result = await session.execute(

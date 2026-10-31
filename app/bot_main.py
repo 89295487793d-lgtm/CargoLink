@@ -49,7 +49,7 @@ def main_menu() -> ReplyKeyboardMarkup:
     rows.extend([
         [KeyboardButton(text="🚚 Найти груз"), KeyboardButton(text="📦 Разместить заявку")],
         [KeyboardButton(text="🚛 Свободные автомобили"), KeyboardButton(text="👤 Мой профиль")],
-        [KeyboardButton(text="📦 Мои перевозки")],
+        [KeyboardButton(text="📋 Активные заявки")],
         [KeyboardButton(text="📨 Мои предложения"), KeyboardButton(text="📋 Мои заявки")],
     ])
     return ReplyKeyboardMarkup(keyboard=rows, resize_keyboard=True, input_field_placeholder="Выберите раздел CargoLink")
@@ -80,7 +80,7 @@ MENU_TEXTS = {
     "👤 Мой профиль",
     "📨 Мои предложения",
     "📋 Мои заявки",
-    "📦 Мои перевозки",
+    "📋 Активные заявки",
 }
 
 
@@ -102,7 +102,7 @@ async def interrupt_form_with_menu(message: Message, state: FSMContext) -> None:
         await show_my_offers(message)
     elif message.text == "📋 Мои заявки":
         await show_my_requests(message)
-    elif message.text == "📦 Мои перевозки":
+    elif message.text == "📋 Активные заявки":
         await show_my_shipments(message)
 
 
@@ -1010,7 +1010,7 @@ async def show_my_requests(message: Message) -> None:
         await message.answer("\n".join(lines), reply_markup=keyboard)
 
 
-@dp.message(F.text == "📦 Мои перевозки")
+@dp.message(F.text == "📋 Активные заявки")
 async def show_my_shipments(message: Message) -> None:
     """Unified workspace for accepted shipments for both customers and carriers."""
     if not message.from_user:
@@ -1036,12 +1036,12 @@ async def show_my_shipments(message: Message) -> None:
             other_id = chat.carrier_id if user.id == chat.customer_id else chat.customer_id
             other_result = await session.execute(select(User).where(User.id == other_id))
             other = other_result.scalar_one_or_none()
-            if cargo and offer:
+            if cargo and offer and cargo.delivery_status != "delivered":
                 records.append((chat, cargo, offer, other))
     if not records:
-        await message.answer("📦 Принятых перевозок пока нет. Они появятся здесь после принятия ставки.", reply_markup=MAIN_MENU)
+        await message.answer("📦 Активных заявок пока нет. Принятые и ещё не доставленные заявки появятся здесь.", reply_markup=MAIN_MENU)
         return
-    await message.answer("📦 МОИ ПЕРЕВОЗКИ\nВыберите перевозку для управления:", reply_markup=MAIN_MENU)
+    await message.answer("📦 АКТИВНЫЕ ЗАЯВКИ\nВыберите перевозку для управления:", reply_markup=MAIN_MENU)
     status_names = {"accepted": "🟡 Заявка принята", "in_transit": "🚚 Груз в пути", "delivered": "✅ Доставлено"}
     for chat, cargo, offer, other in records:
         role = "Заказчик" if user.id == chat.customer_id else "Перевозчик"

@@ -1,15 +1,25 @@
 from pathlib import Path
+import hashlib
+import hmac
+import json
+import time
+from urllib.parse import parse_qsl
 
-from fastapi import FastAPI, HTTPException, Query
+
+from fastapi import FastAPI, Header, HTTPException, Query
+from pydantic import BaseModel, Field
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select, text
 
+from app.config import get_settings
 from app.database import SessionLocal, engine
-from app.models import CargoRequest
+from app.models import CargoRequest, User
+
+settings = get_settings()
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
-app = FastAPI(title="CargoLink API", version="0.4.0")
+app = FastAPI(title="CargoLink API", version="0.5.0")
 
 
 def request_payload(row: CargoRequest) -> dict:
@@ -25,8 +35,83 @@ def request_payload(row: CargoRequest) -> dict:
         "vehicle_type": row.vehicle_type,
         "pickup_date": row.pickup_date,
         "price_rub": row.price_rub,
+        "vat_mode": row.vat_mode,
+        "volume_m3": row.volume_m3,
+        "unloading_date": row.unloading_date,
+        "adr_class": row.adr_class,
+        "comment": row.comment,
         "status": row.status,
     }
+
+
+
+class CreateRequest(BaseModel):
+    origin: str = Field(min_length=3, max_length=300)
+    destination: str = Field(min_length=3, max_length=300)
+    cargo: str = Field(min_length=2, max_length=300)
+    category: str = Field(pattern="^(liquid|dry)$")
+    weight_tons: float = Field(gt=0, le=100000)
+    volume_m3: float | None = Field(default=None, gt=0, le=1000000)
+    adr_class: str | None = Field(default=None, max_length=10)
+    vehicle_type: str = Field(min_length=2, max_length=200)
+    pickup_date: str = Field(min_length=4, max_length=100)
+    unloading_date: str | None = Field(default=None, max_length=100)
+    price_rub: str | None = Field(default=None, max_length=100)
+    vat_mode: str = Field(pattern="^(С НДС|Без НДС)$")
+    comment: str | None = Field(default=None, max_length=1000)
+
+
+def telegram_webapp_user(init_data: str) -> dict:
+    if not settings.bot_token:
+        raise HTTPException(status_code=503, detail="Telegram authentication is not configured")
+    try:
+        pairs = dict(parse_qsl(init_data, keep_blank_values=True))
+        received_hash = pairs.pop("hash")
+        auth_date = int(pairs["auth_date"])
+        user = json.loads(pairs["user"])
+    except (ValueError, KeyError, TypeError, json.JSONDecodeError):
+        raise HTTPException(status_code=401, detail="Invalid Telegram initData")
+    if not isinstance(user, dict) or not user.get("id"):
+        raise HTTPException(status_code=401, detail="Telegram user is missing")
+    if auth_date > int(time.time()) + 60 or int(time.time()) - auth_date > 86400:
+        raise HTTPException(status_code=401, detail="Telegram session expired")
+    check_string = "\\n".join(f"{key}={value}" for key, value in sorted(pairs.items()))
+    secret_key = hmac.new(b"WebAppData", settings.bot_token.encode(), hashlib.sha256).digest()
+    expected_hash = hmac.new(secret_key, check_string.encode(), hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(expected_hash, received_hash):
+        raise HTTPException(status_code=401, detail="Telegram signature check failed")
+    return user
+
+
+@app.post("/api/requests")
+async def create_request(payload: CreateRequest, x_telegram_init_data: str = Header(default="")):
+    telegram_user = telegram_webapp_user(x_telegram_init_data)
+    async with SessionLocal() as session:
+        result = await session.execute(select(User).where(User.telegram_id == int(telegram_user["id"])))
+        user = result.scalar_one_or_none()
+        if user is None or not user.full_name:
+            raise HTTPException(status_code=403, detail="Complete CargoLink registration in Telegram first")
+        row = CargoRequest(
+            customer_id=user.id,
+            origin=payload.origin.strip(),
+            destination=payload.destination.strip(),
+            cargo=payload.cargo.strip(),
+            cargo_category=payload.category,
+            weight_tons=payload.weight_tons,
+            volume_m3=payload.volume_m3,
+            adr_class=payload.adr_class,
+            vehicle_type=payload.vehicle_type.strip(),
+            pickup_date=payload.pickup_date,
+            unloading_date=payload.unloading_date,
+            price_rub=payload.price_rub,
+            vat_mode=payload.vat_mode,
+            comment=payload.comment,
+            status="open",
+        )
+        session.add(row)
+        await session.commit()
+        await session.refresh(row)
+        return {"ok": True, "item": request_payload(row)}
 
 
 @app.get("/health")

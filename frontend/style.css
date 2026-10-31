@@ -133,3 +133,11 @@ input[type="date"]{min-height:46px}
 
 
 .required-star{color:#e53935;font-weight:900;margin-left:2px}
+
+
+/* Keep required marker inline with its field label */
+.label-title{display:inline;align-self:flex-start;line-height:1.35}
+.required-star{display:inline;color:#e53935;font-weight:900;margin-left:2px}
+.date-fields{width:100%;min-width:0}
+.date-fields>label{width:100%;min-width:0}
+.date-fields input[type="date"]{display:block;width:100%;min-width:0;max-width:100%;box-sizing:border-box}

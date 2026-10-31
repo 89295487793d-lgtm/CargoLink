@@ -141,3 +141,24 @@ input[type="date"]{min-height:46px}
 .date-fields{width:100%;min-width:0}
 .date-fields>label{width:100%;min-width:0}
 .date-fields input[type="date"]{display:block;width:100%;min-width:0;max-width:100%;box-sizing:border-box}
+
+
+/* Loading and unloading dates side by side */
+.date-fields{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+  width:100%;
+  min-width:0;
+  align-items:end;
+}
+.date-fields>label{min-width:0;width:100%}
+.date-fields input[type="date"]{
+  display:block;
+  width:100%;
+  min-width:0;
+  max-width:100%;
+  box-sizing:border-box;
+  padding-inline:8px;
+  font-size:14px;
+}

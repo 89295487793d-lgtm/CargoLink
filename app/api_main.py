@@ -24,7 +24,7 @@ app = FastAPI(title="CargoLink API", version="0.5.0")
 
 def request_payload(row: CargoRequest) -> dict:
     cargo = row.cargo or ""
-    category = "liquid" if any(word in cargo.lower() for word in ("дт", "дизел", "бенз", "мазут", "топлив", "нефт", "масло", "аммиак", "жидк")) else "dry"
+    category = row.cargo_category or ("liquid" if any(word in cargo.lower() for word in ("дт", "дизел", "бенз", "мазут", "топлив", "нефт", "масло", "аммиак", "жидк")) else "dry")
     return {
         "id": row.id,
         "origin": row.origin,

@@ -14,7 +14,7 @@ footer{padding:22px 4px 0;color:var(--muted);font-size:10px;text-align:center}@m
 
 /* Request creation */
 .form-intro{padding:18px 5px 8px}.form-intro h2{margin:5px 0;font-size:27px;letter-spacing:-.5px}.form-intro p:last-child{margin:6px 0;color:var(--muted);font-size:12px;line-height:1.5}
-# create-flow{display:block}.search-panel h3{margin:17px 0 8px;padding-top:12px;border-top:1px solid #edf1f6;font-size:14px;color:var(--navy)}.search-panel h3:first-child{margin-top:0;padding-top:0;border-top:0}
+.search-panel h3{margin:17px 0 8px;padding-top:12px;border-top:1px solid #edf1f6;font-size:14px;color:var(--navy)}.search-panel h3:first-child{margin-top:0;padding-top:0;border-top:0}
 select,textarea{width:100%;min-width:0;border:1px solid #dce4ef;border-radius:11px;padding:12px;background:#fbfcfe;color:var(--ink);font:inherit;font-size:13px;outline:none}select:focus,textarea:focus{border-color:#7daaff;box-shadow:0 0 0 3px #1769ff14}textarea{resize:vertical;line-height:1.45}
 .check-label{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 2px;color:#47546a;font-size:11px;font-weight:700}.check-label input{width:20px;height:20px;accent-color:var(--blue)}
 .form-error{margin:10px 0;padding:10px;border-radius:10px;background:#fff0f0;color:#b42318;font-size:11px;line-height:1.4}

@@ -357,3 +357,36 @@ input[type="date"]{min-height:46px}
   .date-fields .label-title{font-size:11px!important}
   .date-fields input[type="date"]{padding:0 3px!important;font-size:11px!important}
 }
+
+
+/* Fix iOS Safari date input collapsing to a narrow vertical strip */
+.date-fields input[type="date"]{
+  display:block!important;
+  flex:0 1 auto!important;
+  width:100%!important;
+  min-width:0!important;
+  max-width:100%!important;
+  height:50px!important;
+  min-height:50px!important;
+  padding:0 4px!important;
+  box-sizing:border-box!important;
+  -webkit-appearance:auto!important;
+  appearance:auto!important;
+  overflow:visible!important;
+  font-size:12px!important;
+  line-height:normal!important;
+  color:#18243a!important;
+}
+.date-fields input[type="date"]::-webkit-date-and-time-value{
+  display:inline-block;
+  min-width:0;
+  width:auto;
+  text-align:left;
+  white-space:nowrap;
+  margin:0;
+  padding:0;
+}
+.date-fields input[type="date"]::-webkit-calendar-picker-indicator{
+  margin:0;
+  padding:0;
+}

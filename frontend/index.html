@@ -213,10 +213,57 @@
 
     <h3>Параметры перевозки</h3>
     <label>Необходимый транспорт *
-      <select id="f-vehicle" required>
+      <input id="f-vehicle-search" type="search" autocomplete="off" placeholder="Начните вводить тип транспорта…" aria-label="Поиск транспорта" aria-controls="f-vehicle-results">
+      <div id="f-vehicle-results" class="cargo-results hidden" role="listbox"></div>
+      <select id="f-vehicle" class="visually-hidden" required tabindex="-1" aria-hidden="true">
         <option value="">Выберите транспорт</option>
-        <option>Автоцистерна</option><option>Бензовоз</option><option>Газовоз</option><option>Тентованный автомобиль</option><option>Фура / еврофура</option><option>Рефрижератор</option><option>Изотермический фургон</option><option>Бортовой автомобиль</option><option>Самосвал</option><option>Контейнеровоз</option><option>Автовоз</option><option>Лесовоз</option><option>Трал / низкорамный полуприцеп</option><option>Молоковоз</option><option>Пищевой наливной транспорт</option><option>Цементовоз</option><option>Зерновоз</option><option>Железнодорожный вагон / цистерна</option><option>Морской транспорт</option><option>Авиационный транспорт</option><option value="manual">✍️ Внести вручную</option>
+        <option>Автоцистерна</option>
+        <option>Бензовоз</option>
+        <option>Газовоз</option>
+        <option>Химическая автоцистерна</option>
+        <option>Пищевая цистерна из нержавеющей стали</option>
+        <option>Молоковоз</option>
+        <option>Водовоз</option>
+        <option>Битумовоз</option>
+        <option>Топливозаправщик</option>
+        <option>Тентованный автомобиль</option>
+        <option>Фура / еврофура</option>
+        <option>Мега-трейлер</option>
+        <option>Jumbo-прицеп</option>
+        <option>Рефрижератор</option>
+        <option>Изотермический фургон</option>
+        <option>Фургон</option>
+        <option>Бортовой автомобиль</option>
+        <option>Манипулятор (КМУ)</option>
+        <option>Самосвал</option>
+        <option>Зерновоз</option>
+        <option>Муковоз</option>
+        <option>Цементовоз</option>
+        <option>Бетоносмеситель</option>
+        <option>Контейнеровоз</option>
+        <option>Трал / низкорамный полуприцеп</option>
+        <option>Автовоз</option>
+        <option>Лесовоз</option>
+        <option>Сортиментовоз</option>
+        <option>Скотовоз</option>
+        <option>Мусоровоз</option>
+        <option>Эвакуатор</option>
+        <option>Железнодорожный крытый вагон</option>
+        <option>Железнодорожная платформа</option>
+        <option>Полувагон</option>
+        <option>Вагон-цистерна</option>
+        <option>Изотермический вагон</option>
+        <option>Рефрижераторный вагон</option>
+        <option>Хоппер</option>
+        <option>Танк-контейнер (20 футов)</option>
+        <option>Танк-контейнер (40 футов)</option>
+        <option>Морское судно / контейнеровоз</option>
+        <option>Морское судно для наливных грузов</option>
+        <option>Паром / Ro-Ro</option>
+        <option>Авиационный грузовой транспорт</option>
+        <option value="manual">✍️ Внести вручную</option>
       </select>
+
     </label>
     <label id="manual-vehicle-wrap" class="hidden">Укажите транспорт<input id="f-vehicle-manual" maxlength="200" placeholder="Тип транспорта"></label>
     <div class="field-row">

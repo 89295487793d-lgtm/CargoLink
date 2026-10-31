@@ -15,12 +15,12 @@
   <form id="create-form" class="search-panel">
     <h3>Маршрут</h3>
     <div class="field-row">
-      <label class="autocomplete-wrap">Откуда *<input id="f-origin" autocomplete="off" required minlength="3" maxlength="300" placeholder="Начните вводить город или адрес"><div id="f-origin-suggestions" class="suggestions hidden"></div></label>
-      <label class="autocomplete-wrap">Куда *<input id="f-destination" autocomplete="off" required minlength="3" maxlength="300" placeholder="Начните вводить город или адрес"><div id="f-destination-suggestions" class="suggestions hidden"></div></label>
+      <label class="autocomplete-wrap">Откуда *<input id="f-origin" autocomplete="off" required minlength="3" maxlength="300" placeholder="Город отправления"><div id="f-origin-suggestions" class="suggestions hidden"></div></label>
+      <label class="autocomplete-wrap">Куда *<input id="f-destination" autocomplete="off" required minlength="3" maxlength="300" placeholder="Город прибытия"><div id="f-destination-suggestions" class="suggestions hidden"></div></label>
     </div>
     <h3>Информация о грузе</h3>
     <label>Наименование груза *
-      <input id="f-cargo-search" type="search" autocomplete="off" placeholder="Начните вводить название груза…" aria-label="Поиск груза" aria-controls="f-cargo-results">
+      <input id="f-cargo-search" type="search" autocomplete="off" placeholder="Выберите или найдите груз" aria-label="Поиск груза" aria-controls="f-cargo-results">
       <div id="f-cargo-results" class="cargo-results hidden" role="listbox"></div>
       <select id="f-cargo" class="visually-hidden" required tabindex="-1" aria-hidden="true">
 <option value="">Выберите груз</option>
@@ -213,7 +213,7 @@
 
     <h3>Параметры перевозки</h3>
     <label>Необходимый транспорт *
-      <input id="f-vehicle-search" type="search" autocomplete="off" placeholder="Начните вводить тип транспорта…" aria-label="Поиск транспорта" aria-controls="f-vehicle-results">
+      <input id="f-vehicle-search" type="search" autocomplete="off" placeholder="Выберите транспорт" aria-label="Поиск транспорта" aria-controls="f-vehicle-results">
       <div id="f-vehicle-results" class="cargo-results hidden" role="listbox"></div>
       <select id="f-vehicle" class="visually-hidden" required tabindex="-1" aria-hidden="true">
         <option value="">Выберите транспорт</option>

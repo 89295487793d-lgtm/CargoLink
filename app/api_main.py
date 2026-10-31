@@ -42,7 +42,7 @@ def request_payload(row: CargoRequest) -> dict:
         "unloading_date": row.unloading_date,
         "adr_class": row.adr_class,
         "comment": row.comment,
-        "status": row.status,
+        "status": row.status,\n        "delivery_status": row.delivery_status,
     }
 
 

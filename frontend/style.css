@@ -101,3 +101,26 @@ input[type="date"]{min-height:46px}
   html{scroll-behavior:auto}
   *,*::before,*::after{transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}
 }
+
+
+/* iPhone form density and field alignment refinement */
+@media(max-width:600px){
+  .form-intro{padding:12px 5px 4px}
+  .form-intro h2{font-size:26px}
+  .form-intro p:last-child{font-size:13px;line-height:1.4}
+  .search-panel{padding:15px}
+  .search-panel h3{margin-top:16px;padding-top:12px}
+  label{gap:6px;margin:8px 0;font-size:12px}
+  input,select,textarea{min-height:44px;padding:10px 11px;font-size:16px}
+  .field-row{gap:9px;align-items:start}
+  .field-row>label{width:100%;min-width:0}
+  input::placeholder,textarea::placeholder{font-size:14px;opacity:1}
+  .check-label{min-height:44px;justify-content:flex-start;gap:12px;padding:8px 0}
+  .check-label span{flex:1}
+  .check-label input{flex:0 0 22px;width:22px;height:22px;margin:0}
+  #f-adr-wrap,.check-label{align-self:end}
+  .preview-actions{padding-bottom:4px}
+}
+@media(max-width:370px){
+  .field-row{grid-template-columns:1fr}
+}

@@ -207,10 +207,68 @@
     ["market-hero","market-search","market-results-head","results","detail"].forEach(id => $(id)?.classList.add("hidden"));
     bindAddressAutocomplete("f-origin", "f-origin-suggestions");
     bindAddressAutocomplete("f-destination", "f-destination-suggestions");
-    $("f-cargo").addEventListener("change", () => {
-      $("manual-cargo-wrap").classList.toggle("hidden", $("f-cargo").value !== "manual");
-      applyCargoSuggestions();
+    const cargoSelect = $("f-cargo");
+    const cargoSearch = $("f-cargo-search");
+    const cargoResults = $("f-cargo-results");
+    const cargoSelected = $("f-cargo-selected");
+    const cargoOptions = Array.from(cargoSelect.options).filter(o => o.value !== "" && o.value !== "manual");
+    function renderCargoResults(query = "") {
+      const q = query.trim().toLocaleLowerCase("ru");
+      const matches = cargoOptions.filter(o => o.textContent.toLocaleLowerCase("ru").includes(q)).slice(0, 35);
+      cargoResults.innerHTML = "";
+      if (!matches.length) {
+        cargoResults.innerHTML = '<div class="cargo-empty">Ничего не найдено. Можно ввести название вручную.</div>';
+      } else {
+        matches.forEach(option => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "cargo-result";
+          button.setAttribute("role", "option");
+          button.textContent = option.textContent;
+          button.addEventListener("click", () => {
+            cargoSelect.value = option.value;
+            cargoSearch.value = option.textContent;
+            cargoResults.classList.add("hidden");
+            cargoSelected.classList.remove("hidden");
+            cargoSelected.textContent = "Выбрано: " + option.textContent;
+            $("manual-cargo-wrap").classList.add("hidden");
+            applyCargoSuggestions();
+          });
+          cargoResults.appendChild(button);
+        });
+      }
+      const manual = document.createElement("button");
+      manual.type = "button";
+      manual.className = "cargo-result";
+      manual.textContent = "✍️ Ввести вручную";
+      manual.addEventListener("click", () => {
+        cargoSelect.value = "manual";
+        cargoSearch.value = "";
+        cargoResults.classList.add("hidden");
+        cargoSelected.classList.add("hidden");
+        $("manual-cargo-wrap").classList.remove("hidden");
+        $("f-cargo-manual").focus();
+      });
+      cargoResults.appendChild(manual);
+      cargoResults.classList.remove("hidden");
+    }
+    cargoSearch.addEventListener("focus", () => renderCargoResults(cargoSearch.value));
+    cargoSearch.addEventListener("input", () => {
+      cargoSelect.value = "";
+      cargoSelected.classList.add("hidden");
+      renderCargoResults(cargoSearch.value);
     });
+    cargoSearch.addEventListener("keydown", event => {
+      if (event.key === "Escape") cargoResults.classList.add("hidden");
+      if (event.key === "Enter") {
+        const first = cargoResults.querySelector(".cargo-result");
+        if (first && !cargoResults.classList.contains("hidden")) { event.preventDefault(); first.click(); }
+      }
+    });
+    document.addEventListener("click", event => {
+      if (!event.target.closest("#f-cargo-search") && !event.target.closest("#f-cargo-results")) cargoResults.classList.add("hidden");
+    });
+
     $("f-vehicle").addEventListener("change", () => $("manual-vehicle-wrap").classList.toggle("hidden", $("f-vehicle").value !== "manual"));
     $("f-adr-toggle").addEventListener("change", () => $("adr-wrap").classList.toggle("hidden", !$("f-adr-toggle").checked));
     $("create-form").addEventListener("submit", (event) => {

@@ -29,6 +29,7 @@ class CargoRequest(Base):
     cargo_category: Mapped[str | None] = mapped_column(String(20), nullable=True)
     volume_m3: Mapped[float | None] = mapped_column(Float, nullable=True)
     vat_mode: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    payment_method: Mapped[str | None] = mapped_column(String(40), nullable=True)
     unloading_date: Mapped[str | None] = mapped_column(String(100), nullable=True)
     adr_class: Mapped[str | None] = mapped_column(String(10), nullable=True)
     comment: Mapped[str | None] = mapped_column(String(1000), nullable=True)

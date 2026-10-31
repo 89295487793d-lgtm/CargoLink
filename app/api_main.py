@@ -15,11 +15,13 @@ from sqlalchemy import select, text
 from app.config import get_settings
 from app.database import SessionLocal, engine
 from app.models import CargoRequest, User
+from app.api.v2.router import router as api_v2_router
 
 settings = get_settings()
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
-app = FastAPI(title="CargoLink API", version="0.5.0")
+app = FastAPI(title="CargoLink API", version="0.6.0")
+app.include_router(api_v2_router)
 
 
 def request_payload(row: CargoRequest) -> dict:

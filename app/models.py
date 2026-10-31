@@ -63,4 +63,6 @@ class CargoChatMessage(Base):
     chat_id: Mapped[int] = mapped_column(ForeignKey("cargo_chats.id", ondelete="CASCADE"), index=True)
     sender_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     body: Mapped[str] = mapped_column(String(4000))
+    content_type: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    file_id: Mapped[str | None] = mapped_column(String(500), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

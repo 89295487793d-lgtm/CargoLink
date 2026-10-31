@@ -28,3 +28,19 @@ class CargoRequest(Base):
     price_rub: Mapped[str | None] = mapped_column(String(100), nullable=True)
     status: Mapped[str] = mapped_column(String(30), default="open", index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+
+class CarrierOffer(Base):
+    __tablename__ = "carrier_offers"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    request_id: Mapped[int] = mapped_column(ForeignKey("cargo_requests.id", ondelete="CASCADE"), index=True)
+    carrier_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    price_rub: Mapped[float] = mapped_column(Float)
+    vat_mode: Mapped[str] = mapped_column(String(20))
+    vehicle_type: Mapped[str] = mapped_column(String(200))
+    completion_date: Mapped[str] = mapped_column(String(100))
+    comment: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    status: Mapped[str] = mapped_column(String(30), default="pending", index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

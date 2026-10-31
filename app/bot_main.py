@@ -76,6 +76,8 @@ PRICE_MENU = ReplyKeyboardMarkup(
 MENU_TEXTS = {
     "🚚 Найти груз",
     "📦 Создать заявку",
+    "📦 Разместить заявку",
+    "Разместить заявку",
     "🚛 Свободные автомобили",
     "👤 Мой профиль",
     "📨 Мои предложения",
@@ -92,7 +94,7 @@ async def interrupt_form_with_menu(message: Message, state: FSMContext) -> None:
         await message.answer("Текущий черновик заявки отменён. Открываю выбранный раздел.", reply_markup=MAIN_MENU)
     if message.text == "🚚 Найти груз":
         await find_loads(message)
-    elif message.text == "📦 Создать заявку":
+    elif message.text in {"📦 Создать заявку", "📦 Разместить заявку", "Разместить заявку"}:
         await begin_placement(message, state)
     elif message.text == "🚛 Свободные автомобили":
         await find_vehicles(message)
@@ -150,7 +152,7 @@ async def save_contact(message: Message) -> None:
     await message.answer("Номер сохранён в профиле и не публикуется в заявках.", reply_markup=MAIN_MENU)
 
 
-@dp.message(F.text == "📦 Создать заявку")
+@dp.message(F.text.in_({"📦 Создать заявку", "📦 Разместить заявку", "Разместить заявку"}))
 async def begin_placement(message: Message, state: FSMContext) -> None:
     if not message.from_user:
         return

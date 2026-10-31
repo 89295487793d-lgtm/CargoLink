@@ -124,3 +124,9 @@ input[type="date"]{min-height:46px}
 @media(max-width:370px){
   .field-row{grid-template-columns:1fr}
 }
+
+
+/* Keep loading and unloading dates on separate rows */
+.date-fields{display:grid;grid-template-columns:minmax(0,1fr);gap:2px}
+.date-fields>label{width:100%;min-width:0}
+.date-fields input[type="date"]{width:100%;max-width:100%;min-width:0}

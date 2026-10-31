@@ -172,7 +172,7 @@
     const suggestion = defaults[cargo];
     if (!suggestion) return;
     if (suggestion.category) category.value = suggestion.category;
-    if (suggestion.vehicle) vehicle.value = suggestion.vehicle;
+    if (suggestion.vehicle) { vehicle.value = suggestion.vehicle; const search = $("f-vehicle-search"); if (search) search.value = suggestion.vehicle; }
     if (typeof suggestion.adr === "boolean") {
       $("f-adr-toggle").checked = suggestion.adr;
       $("adr-wrap").classList.toggle("hidden", !suggestion.adr);
@@ -245,7 +245,26 @@
       if (!event.target.closest("#f-cargo-search") && !event.target.closest("#f-cargo-results")) cargoResults.classList.add("hidden");
     });
 
-    $("f-vehicle").addEventListener("change", () => $("manual-vehicle-wrap").classList.toggle("hidden", $("f-vehicle").value !== "manual"));
+    const vehicleSelect=$("f-vehicle"), vehicleSearch=$("f-vehicle-search"), vehicleResults=$("f-vehicle-results");
+    const vehicleOptions=Array.from(vehicleSelect.options).filter(o=>o.value&&o.value!=="manual");
+    function renderVehicleResults(query=""){
+      const q=query.trim().toLocaleLowerCase("ru");
+      const matches=vehicleOptions.filter(o=>o.textContent.toLocaleLowerCase("ru").includes(q)).slice(0,40);
+      vehicleResults.innerHTML="";
+      matches.forEach(option=>{
+        const button=document.createElement("button");button.type="button";button.className="cargo-result";button.setAttribute("role","option");button.textContent=option.textContent;
+        button.addEventListener("click",()=>{vehicleSelect.value=option.value;vehicleSearch.value=option.textContent;vehicleResults.classList.add("hidden");$("manual-vehicle-wrap").classList.add("hidden");});
+        vehicleResults.appendChild(button);
+      });
+      const manual=document.createElement("button");manual.type="button";manual.className="cargo-result";manual.textContent="✍️ Внести вручную";
+      manual.addEventListener("click",()=>{vehicleSelect.value="manual";vehicleSearch.value="";vehicleResults.classList.add("hidden");$("manual-vehicle-wrap").classList.remove("hidden");$("f-vehicle-manual").focus();});
+      vehicleResults.appendChild(manual);vehicleResults.classList.remove("hidden");
+    }
+    vehicleSearch.addEventListener("focus",()=>renderVehicleResults(vehicleSearch.value));
+    vehicleSearch.addEventListener("input",()=>{vehicleSelect.value="";renderVehicleResults(vehicleSearch.value);});
+    vehicleSearch.addEventListener("keydown",event=>{if(event.key==="Escape")vehicleResults.classList.add("hidden");if(event.key==="Enter"){const first=vehicleResults.querySelector(".cargo-result");if(first&&!vehicleResults.classList.contains("hidden")){event.preventDefault();first.click();}}});
+    document.addEventListener("click",event=>{if(!event.target.closest("#f-vehicle-search")&&!event.target.closest("#f-vehicle-results"))vehicleResults.classList.add("hidden");});
+
     $("f-adr-toggle").addEventListener("change", () => $("adr-wrap").classList.toggle("hidden", !$("f-adr-toggle").checked));
     $("create-form").addEventListener("submit", (event) => {
       event.preventDefault();

@@ -15,11 +15,11 @@
   <form id="create-form" class="search-panel">
     <h3>Маршрут</h3>
     <div class="field-row">
-      <label class="autocomplete-wrap">Откуда *<input id="f-origin" autocomplete="off" required minlength="3" maxlength="300" placeholder="Город отправления"><div id="f-origin-suggestions" class="suggestions hidden"></div></label>
-      <label class="autocomplete-wrap">Куда *<input id="f-destination" autocomplete="off" required minlength="3" maxlength="300" placeholder="Город прибытия"><div id="f-destination-suggestions" class="suggestions hidden"></div></label>
+      <label class="autocomplete-wrap">Откуда <span class="required-star">*</span><input id="f-origin" autocomplete="off" required minlength="3" maxlength="300" placeholder="Город отправления"><div id="f-origin-suggestions" class="suggestions hidden"></div></label>
+      <label class="autocomplete-wrap">Куда <span class="required-star">*</span><input id="f-destination" autocomplete="off" required minlength="3" maxlength="300" placeholder="Город прибытия"><div id="f-destination-suggestions" class="suggestions hidden"></div></label>
     </div>
     <h3>Информация о грузе</h3>
-    <label>Наименование груза *
+    <label>Наименование груза <span class="required-star">*</span>
       <input id="f-cargo-search" type="search" autocomplete="off" placeholder="Выберите или найдите груз" aria-label="Поиск груза" aria-controls="f-cargo-results">
       <div id="f-cargo-results" class="cargo-results hidden" role="listbox"></div>
       <select id="f-cargo" class="visually-hidden" required tabindex="-1" aria-hidden="true">
@@ -202,8 +202,8 @@
     </label>
     <label id="manual-cargo-wrap" class="hidden">Укажите наименование<input id="f-cargo-manual" maxlength="300" placeholder="Наименование груза"></label>
     <div class="field-row">
-      <label>Категория *<select id="f-category"><option value="liquid">Налив</option><option value="dry">Обычный</option></select></label>
-      <label>Масса, тонн *<input id="f-weight" type="number" min="0.01" max="100000" step="0.01" required placeholder="20"></label>
+      <label>Категория <span class="required-star">*</span><select id="f-category"><option value="liquid">Налив</option><option value="dry">Обычный</option></select></label>
+      <label>Масса, тонн <span class="required-star">*</span><input id="f-weight" type="number" min="0.01" max="100000" step="0.01" required placeholder="20"></label>
     </div>
     <div class="field-row">
       <label>Объём, м³<input id="f-volume" type="number" min="0.01" max="1000000" step="0.01" placeholder="Необязательно"></label>
@@ -212,7 +212,7 @@
     <label id="adr-wrap" class="hidden">Класс ADR<select id="f-adr"><option value="">Выберите класс</option><option>1</option><option>2</option><option>3</option><option>4.1</option><option>4.2</option><option>4.3</option><option>5.1</option><option>5.2</option><option>6.1</option><option>6.2</option><option>7</option><option>8</option><option>9</option></select></label>
 
     <h3>Параметры перевозки</h3>
-    <label>Необходимый транспорт *
+    <label>Необходимый транспорт <span class="required-star">*</span>
       <input id="f-vehicle-search" type="search" autocomplete="off" placeholder="Выберите транспорт" aria-label="Поиск транспорта" aria-controls="f-vehicle-results">
       <div id="f-vehicle-results" class="cargo-results hidden" role="listbox"></div>
       <select id="f-vehicle" class="visually-hidden" required tabindex="-1" aria-hidden="true">
@@ -267,13 +267,13 @@
     </label>
     <label id="manual-vehicle-wrap" class="hidden">Укажите транспорт<input id="f-vehicle-manual" maxlength="200" placeholder="Тип транспорта"></label>
     <div class="date-fields">
-      <label>Дата загрузки *<input id="f-pickup" type="date" required></label>
+      <label>Дата загрузки <span class="required-star">*</span><input id="f-pickup" type="date" required></label>
       <label>Дата выгрузки<input id="f-unloading" type="date"></label>
     </div>
     <h3>Стоимость</h3>
     <div class="field-row">
       <label>Стоимость, ₽<input id="f-price" inputmode="decimal" placeholder="Не указывать"></label>
-      <label>Форма оплаты *<select id="f-price-terms"><option value="С НДС, безнал">С НДС, безнал</option><option value="Без НДС, безнал">Без НДС, безнал</option><option value="Наличными">Наличными</option><option value="Запрос ставки">Запрос ставки</option></select></label>
+      <label>Форма оплаты <span class="required-star">*</span><select id="f-price-terms"><option value="С НДС, безнал">С НДС, безнал</option><option value="Без НДС, безнал">Без НДС, безнал</option><option value="Наличными">Наличными</option><option value="Запрос ставки">Запрос ставки</option></select></label>
     </div>
     <h3>Дополнительная информация</h3>
     <label>Комментарий<textarea id="f-comment" rows="3" maxlength="1000" placeholder="Особые условия, требования к перевозке"></textarea></label>
